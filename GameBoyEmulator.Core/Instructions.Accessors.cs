@@ -97,6 +97,9 @@ namespace GameBoyEmulator.Core
                 Registers.A = newVal;
             };
 
+            public static Action SbcN(Func<byte> amountGetter) =>
+                SubN(() => (byte)(amountGetter() + (Registers.IsCarry ? 1 : 0)));
+
             public static Action And(Func<byte> getter) => () =>
             {
                 var newVal = (byte)(Registers.A & getter());

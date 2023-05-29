@@ -84,7 +84,7 @@ namespace GameBoyEmulator.Core
 
         private static Action Bit(int bit, Func<byte> valueGetter) => () =>
         {
-            Registers.IsZero = ((byte)(1 << bit) & valueGetter()) == 0x00;
+            Registers.IsZero = !Maths.BitIsSet(bit, valueGetter());
             Registers.IsSubtract = false;
             Registers.IsHalfCarry = true;
         };
@@ -92,7 +92,7 @@ namespace GameBoyEmulator.Core
         private static Action Set(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(Maths.SetBit(bit, valueGetter()));
         private static Action Unset(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(Maths.UnsetBit(bit, valueGetter()));
 
-        public static Action Compare(Func<byte> valueGetter) => () =>
+        private static Action Compare(Func<byte> valueGetter) => () =>
         {
             var value = valueGetter();
 

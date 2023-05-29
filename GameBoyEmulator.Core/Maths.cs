@@ -48,8 +48,8 @@ namespace GameBoyEmulator.Core
 
             return value;
         }
-        
-        
+
+        public static bool BitIsSet(int bit, byte value) => ((byte)(1 << bit) & value) != 0x00;
         public static byte SetBit(int bit, byte value) => (byte)(value | (1 << bit));
         public static byte UnsetBit(int bit, byte value) => (byte)(value & unchecked((byte)~(1 << bit)));
     }

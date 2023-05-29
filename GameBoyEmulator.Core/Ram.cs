@@ -2,30 +2,173 @@ namespace GameBoyEmulator.Core
 {
     public static class Ram
     {
-        private static readonly byte[] Memory = new byte[ushort.MaxValue]; // TODO: Set actual max size
+        public static event Events.SerialCharacterWrittenHandler? SerialCharacterWritten;
+        private static readonly byte[] Memory = new byte[int.MaxValue - 1000]; // TODO: Set actual max size
+
+#region LCD Status Registers
+
+        public static byte STAT
+        {
+            get => Memory[STAT_ADDR];
+            set
+            {
+                Memory[STAT_ADDR] = value;
+                UpdateLYCEqualsLYFlag();
+            }
+        }
+        public static Modes STAT_Mode
+        {
+            get
+            {
+                var registerValue = STAT;
+                var bit1 = Maths.BitIsSet(1, registerValue);
+                var bit0 = Maths.BitIsSet(0, registerValue);
+                switch (bit0)
+                {
+                    case true: return bit1 ? Modes.Vram : Modes.VBlank;
+                    case false: return bit1 ? Modes.Oam : Modes.HBlank;
+                }
+            }
+            set
+            {
+                var newValue = STAT;
+                
+                newValue = value is Modes.Vram or Modes.VBlank
+                    ? Maths.SetBit(0, newValue)
+                    : Maths.UnsetBit(0, newValue);
+                newValue = value is Modes.Oam or Modes.Vram
+                    ? Maths.SetBit(1, newValue)
+                    : Maths.UnsetBit(1, newValue);
+                
+                STAT = newValue;
+            }
+        }
+        
+        public static byte LY
+        {
+            get => Memory[LY_ADDR];
+            set
+            {
+                Memory[LY_ADDR] = value;
+                UpdateLYCEqualsLYFlag();
+            }
+        }
+
+        public static byte LYC
+        {
+            get => Memory[LYC_ADDR];
+            set
+            {
+                Memory[LYC_ADDR] = value;
+                UpdateLYCEqualsLYFlag();
+            }
+        }
+
+        private const ushort STAT_ADDR = 0xFF41;
+        private const ushort LY_ADDR = 0xFF44;
+        private const ushort LYC_ADDR = 0xFF45;
+
+#endregion
+
+        public static byte SB
+        {
+            set
+            {
+                Memory[SB_ADDR] = value;
+                SerialCharacterWritten?.Invoke(value);
+            }
+        }
+
+        private const ushort SB_ADDR = 0xFF01;
 
         public static void Reset()
         {
             Array.Fill(Memory, (byte)0x00);
-            Array.Copy(BootstrapRom, Memory, BootstrapRom.Length);
         }
-        
+
+        public static void LoadROM(byte[] romBytes)
+        {
+            // TODO: This needs work
+            Array.Copy(romBytes, Memory, Math.Min(romBytes.Length, Memory.Length));
+        }
+
         public static byte GetN(ushort address)
         {
             Clock.Cycle += 4;
+            
+            if ((address >= 0xFE00 && address <= 0xFE9F) && STAT_Mode is Modes.Oam or Modes.Vram)
+            {
+                // Protected during this GPU mode, return garbage
+                return 0xFF;
+            }
+            if ((address >= 0xFE69 && address <= 0xFE6B) && STAT_Mode is Modes.Vram)
+            {
+                // Protected during this GPU mode, return garbage
+                return 0xFF;
+            }
+
+            if (Memory[0xFF50] != 0x01 && address <= 0x0100)
+            {
+                // Boot ROM
+                return BootstrapRom[address];
+            }
+            
             return Memory[address];
         }
 
+        public static ushort GetNN(ushort address) => Maths.CombineBytes(GetN(address), GetN((ushort)(address + 1)));
+
         public static void SetN(ushort address, byte value)
         {
+            // TODO: These two checks should be standardised better same with reads
+            if ((address >= 0xFE00 && address <= 0xFE9F) && STAT_Mode is Modes.Oam or Modes.Vram)
+            {
+                // Protected during this GPU mode, do nothing
+            }
+            else if ((address >= 0xFE69 && address <= 0xFE6B) && STAT_Mode is Modes.Vram)
+            {
+                // Protected during this GPU mode, do nothing
+            }
+            if (Memory[0xFF50] != 0x01 && address <= 0x0100)
+            {
+                // Cart ROM is protected, do nothing
+                // TODO: I assume?
+            }
+            
             // TODO: Any protected memory addresses?
             Clock.Cycle += 4;
-            Memory[address] = value;
+
+            switch (address)
+            {
+                case SB_ADDR:
+                    SB = value;
+                    break;
+                case STAT_ADDR:
+                    STAT = value;
+                    break;
+                case LY_ADDR:
+                    // This is readonly so ignore the write
+                    break;
+                case LYC_ADDR:
+                    LYC = value;
+                    break;
+                default:
+                    Memory[address] = value;
+                    break;
+            }
         }
 
         public static byte GetNextN() => GetN(Registers.PC++);
-        public static sbyte GetNextSignedN() => (sbyte)GetN(Registers.PC++);    // TODO: This almost certainly won't work. How do we handle this?
+        public static sbyte GetNextSignedN() => (sbyte)GetN(Registers.PC++); // TODO: This almost certainly won't work. How do we handle this?
         public static ushort GetNextNN() => Maths.CombineBytes(GetNextN(), GetNextN());
+
+        private static void UpdateLYCEqualsLYFlag()
+        {
+            // Go direct to memory instead of via STAT property to avoid looping back into here
+            Memory[STAT_ADDR] = LY == LYC
+                ? Maths.SetBit(2, STAT)
+                : Maths.UnsetBit(2, STAT);
+        }
 
         private static readonly byte[] BootstrapRom =
         {

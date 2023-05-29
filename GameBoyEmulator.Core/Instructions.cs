@@ -12,7 +12,7 @@ namespace GameBoyEmulator.Core
         {
             var (instructionName, execute) = map[instruction];
 
-            InstructionExecuting?.Invoke(instructionName);
+            InstructionExecuting?.Invoke($"0x{Convert.ToString(Registers.PC-1, 16).PadLeft(4, '0').ToUpperInvariant()} - {instructionName}");
             execute();
         }
 
@@ -261,14 +261,14 @@ namespace GameBoyEmulator.Core
                 { 0x95, ("SUB L", Setters.SubN(Getters.GetL)) },
                 { 0x96, ("SUB (HL)", Setters.SubN(Getters.GetHLI)) },
                 { 0x97, ("SUB A", Setters.SubN(Getters.GetA)) },
-                { 0x98, ("SBC A,B", NotImpl) },
-                { 0x99, ("SBC A,C", NotImpl) },
-                { 0x9A, ("SBC A,D", NotImpl) },
-                { 0x9B, ("SBC A,E", NotImpl) },
-                { 0x9C, ("SBC A,H", NotImpl) },
-                { 0x9D, ("SBC A,L", NotImpl) },
-                { 0x9E, ("SBC A,(HL)", NotImpl) },
-                { 0x9F, ("SBC A,A", NotImpl) },
+                { 0x98, ("SBC A,B", Setters.SbcN(Getters.GetB)) },
+                { 0x99, ("SBC A,C", Setters.SbcN(Getters.GetC)) },
+                { 0x9A, ("SBC A,D", Setters.SbcN(Getters.GetD)) },
+                { 0x9B, ("SBC A,E", Setters.SbcN(Getters.GetE)) },
+                { 0x9C, ("SBC A,H", Setters.SbcN(Getters.GetH)) },
+                { 0x9D, ("SBC A,L", Setters.SbcN(Getters.GetL)) },
+                { 0x9E, ("SBC A,(HL)", Setters.SbcN(Getters.GetHLI)) },
+                { 0x9F, ("SBC A,A", Setters.SbcN(Getters.GetA)) },
 
 #endregion
 
@@ -386,7 +386,7 @@ namespace GameBoyEmulator.Core
                 { 0xF0, ("LDH A,(a8)", LdN(Setters.SetA, Getters.GetIndirect(() => (ushort)(0xFF00 + Ram.GetNextN())))) },
                 { 0xF1, ("POP AF", Pop(Setters.SetAF)) },
                 { 0xF2, ("LD A,(C)", LdN(Setters.SetA, Getters.GetIndirect(() => (ushort)(0xFF00 + Getters.GetC())))) },
-                { 0xF3, ("DI", NotImpl) },
+                { 0xF3, ("DI", () => Registers.IME = false) },
                 // 0xF4 - Non-existent
                 { 0xF5, ("PUSH AF", Push(Getters.GetAF)) },
                 { 0xF6, ("OR d8", NotImpl) },
@@ -394,7 +394,7 @@ namespace GameBoyEmulator.Core
                 { 0xF8, ("LD HL,SP+r8", NotImpl) },
                 { 0xF9, ("LD SP,HL", LdNN(Setters.SetSP, Getters.GetHL)) },
                 { 0xFA, ("LD A,(a16)", LdN(Setters.SetA, Getters.GetIndirect(Ram.GetNextNN))) },
-                { 0xFB, ("EI", NotImpl) },
+                { 0xFB, ("EI", () => Registers.IME = true) },
                 // 0xFC - Non-existent
                 // 0xFD - Non-existent
                 { 0xFE, ("CP d8", Compare(Ram.GetNextN)) },
