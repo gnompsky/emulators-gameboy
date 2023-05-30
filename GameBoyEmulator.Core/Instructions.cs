@@ -42,7 +42,7 @@ namespace GameBoyEmulator.Core
                 { 0x07, ("RLCA", RotateLeft(Getters.GetA, Setters.SetA)) },
                 { 0x08, ("LD (a16),SP", NotImpl) },
                 { 0x09, ("ADD HL,BC", NotImpl) },
-                { 0x0A, ("LD A,(BC)", NotImpl) },
+                { 0x0A, ("LD A,(BC)", LdN(Setters.SetA, Getters.GetIndirect(Getters.GetBC))) },
                 { 0x0B, ("DEC BC", Setters.DecBC) },
                 { 0x0C, ("INC C", Setters.IncC) },
                 { 0x0D, ("DEC C", Setters.DecC) },
@@ -240,14 +240,14 @@ namespace GameBoyEmulator.Core
                 { 0x85, ("ADD A,L", Setters.AddN(Getters.GetL)) },
                 { 0x86, ("ADD A,(HL)", Setters.AddN(Getters.GetHLI)) },
                 { 0x87, ("ADD A,A", Setters.AddN(Getters.GetA)) },
-                { 0x88, ("ADC A,B", NotImpl) },
-                { 0x89, ("ADC A,C", NotImpl) },
-                { 0x8A, ("ADC A,D", NotImpl) },
-                { 0x8B, ("ADC A,E", NotImpl) },
-                { 0x8C, ("ADC A,H", NotImpl) },
-                { 0x8D, ("ADC A,L", NotImpl) },
-                { 0x8E, ("ADC A,(HL)", NotImpl) },
-                { 0x8F, ("ADC A,A", NotImpl) },
+                { 0x88, ("ADC A,B", Setters.AdcN(Getters.GetB)) },
+                { 0x89, ("ADC A,C", Setters.AdcN(Getters.GetC)) },
+                { 0x8A, ("ADC A,D", Setters.AdcN(Getters.GetD)) },
+                { 0x8B, ("ADC A,E", Setters.AdcN(Getters.GetE)) },
+                { 0x8C, ("ADC A,H", Setters.AdcN(Getters.GetH)) },
+                { 0x8D, ("ADC A,L", Setters.AdcN(Getters.GetL)) },
+                { 0x8E, ("ADC A,(HL)", Setters.AdcN(Getters.GetHLI)) },
+                { 0x8F, ("ADC A,A", Setters.AdcN(Getters.GetA)) },
 
 #endregion
 
@@ -330,7 +330,7 @@ namespace GameBoyEmulator.Core
                 { 0xCB, ("PREFIX CB", () => ExecuteFrom(CbMap, Ram.GetNextN())) },
                 { 0xCC, ("CALL Z,a16", CallIf(Getters.GetZero, Ram.GetNextNN)) },
                 { 0xCD, ("CALL a16", Call(Ram.GetNextNN)) },
-                { 0xCE, ("ADC A,d8", NotImpl) },
+                { 0xCE, ("ADC A,d8", Setters.AdcN(Ram.GetNextN)) },
                 { 0xCF, ("RST 08H", NotImpl) },
 
 #endregion
@@ -355,7 +355,7 @@ namespace GameBoyEmulator.Core
                 // 0xDB - Non-existent
                 { 0xDC, ("CALL C,a16", CallIf(Getters.GetCarry, Ram.GetNextNN)) },
                 // 0xDD - Non-existent
-                { 0xDE, ("SBC A,d8", NotImpl) },
+                { 0xDE, ("SBC A,d8", Setters.SbcN(Ram.GetNextN)) },
                 { 0xDF, ("RST 18H", NotImpl) },
 
 #endregion
@@ -368,7 +368,7 @@ namespace GameBoyEmulator.Core
                 // 0xE3 - Non-existent
                 // 0xE4 - Non-existent
                 { 0xE5, ("PUSH HL", Push(Getters.GetHL)) },
-                { 0xE6, ("AND d8", NotImpl) },
+                { 0xE6, ("AND d8", Setters.And(Ram.GetNextN)) },
                 { 0xE7, ("RST 20H", NotImpl) },
                 { 0xE8, ("ADD SP,r8", NotImpl) },
                 { 0xE9, ("JP (HL)", Jump(Getters.GetHL)) },
@@ -376,7 +376,7 @@ namespace GameBoyEmulator.Core
                 // 0xEB - Non-existent
                 // 0xEC - Non-existent
                 // 0xED - Non-existent
-                { 0xEE, ("XOR d8", NotImpl) },
+                { 0xEE, ("XOR d8", Setters.Xor(Ram.GetNextN)) },
                 { 0xEF, ("RST 28H", NotImpl) },
 
 #endregion
@@ -389,7 +389,7 @@ namespace GameBoyEmulator.Core
                 { 0xF3, ("DI", () => Registers.IME = false) },
                 // 0xF4 - Non-existent
                 { 0xF5, ("PUSH AF", Push(Getters.GetAF)) },
-                { 0xF6, ("OR d8", NotImpl) },
+                { 0xF6, ("OR d8", Setters.Or(Ram.GetNextN)) },
                 { 0xF7, ("RST 30H", NotImpl) },
                 { 0xF8, ("LD HL,SP+r8", NotImpl) },
                 { 0xF9, ("LD SP,HL", LdNN(Setters.SetSP, Getters.GetHL)) },

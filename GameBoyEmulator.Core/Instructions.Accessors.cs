@@ -66,6 +66,9 @@ namespace GameBoyEmulator.Core
                 Registers.IsHalfCarry = halfCarried;
                 Registers.A = newVal;
             };
+            
+            public static Action AdcN(Func<byte> amountGetter) =>
+                AddN(() => (byte)(amountGetter() + (Registers.IsCarry ? 1 : 0)));
 
             public static void DecA() => DecN(SetA, Getters.GetA)();
             public static void DecB() => DecN(SetB, Getters.GetB)();
