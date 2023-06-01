@@ -2,6 +2,8 @@ namespace GameBoyEmulator.Core
 {
     public static class Gpu
     {
+        public static event Events.GpuPixelsUpdatedHandler? GpuPixelsUpdated;
+        
         private static byte _control;
         private static byte _scrollX;
         private static byte _scrollY;
@@ -58,6 +60,13 @@ namespace GameBoyEmulator.Core
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            // TODO: Debug print, fills LY rows of pixels white
+            var bytes = new byte[256 * 256];
+            Array.Fill(bytes, (byte)0x0, 0, bytes.Length);
+            Array.Fill(bytes, (byte)0x1, 0, Ram.LY * 256);
+
+            GpuPixelsUpdated?.Invoke(bytes);
         }
     }
 }
