@@ -32,8 +32,8 @@ namespace GameBoyEmulator.Core
             if (!condition()) return;
 
             Registers.PC = r8 < 0
-                ? Maths.WrappingSubtract(Registers.PC, (ushort)Math.Abs(r8))
-                : Maths.WrappingAdd(Registers.PC, (ushort)r8);
+                ? Registers.PC.WrappingSubtract((ushort)Math.Abs(r8))
+                : Registers.PC.WrappingAdd((ushort)r8);
         };
         
         private static Action Jump(Func<ushort> valueGetter) => JumpIf(() => true, valueGetter);
@@ -55,7 +55,7 @@ namespace GameBoyEmulator.Core
 
         private static Action Push(Func<ushort> valueGetter) => () =>
         {
-            Maths.SplitShortTo(valueGetter(), out var lower, out var upper);
+            valueGetter().SplitToBytes(out var lower, out var upper);
 
             Setters.DecSP();
             Ram.SetN(Getters.GetSP(), upper);
@@ -84,13 +84,13 @@ namespace GameBoyEmulator.Core
 
         private static Action Bit(int bit, Func<byte> valueGetter) => () =>
         {
-            Registers.IsZero = !Maths.BitIsSet(bit, valueGetter());
+            Registers.IsZero = !valueGetter().BitIsSet(bit);
             Registers.IsSubtract = false;
             Registers.IsHalfCarry = true;
         };
 
-        private static Action Set(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(Maths.SetBit(bit, valueGetter()));
-        private static Action Unset(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(Maths.UnsetBit(bit, valueGetter()));
+        private static Action Set(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(valueGetter().SetBit(bit));
+        private static Action Unset(int bit, Func<byte> valueGetter, Action<byte> valueSetter) => () => valueSetter(valueGetter().UnsetBit(bit));
 
         private static Action Compare(Func<byte> valueGetter) => () =>
         {

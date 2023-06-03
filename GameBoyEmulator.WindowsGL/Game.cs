@@ -1,6 +1,9 @@
 using GameBoyEmulator.Core;
+using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Media;
 
 namespace GameBoyEmulator.WindowsGL
 {
@@ -57,6 +60,7 @@ namespace GameBoyEmulator.WindowsGL
                 Array.Copy(bytes, _pixelBuffer, bytes.Length);
                 _pixelsDirty = true;
             };
+            Ram.HardwareRegisters.Audio.AudioChannelTriggered += PlayAudio;
             
             base.Initialize();
 
@@ -217,6 +221,31 @@ namespace GameBoyEmulator.WindowsGL
             }
 
             GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, quad, 0, 4, indices, 0, 2);
+        }
+
+        private void PlayAudio(int channel, int pan, byte[] data)
+        {
+            switch (channel)
+            {
+                case 1:
+                    PlayAudioChannel1(pan, data);
+                    break;
+            }
+        }
+
+        private void PlayAudioChannel1(int pan, byte[] data)
+        {
+            var volume = 1;
+
+            // TODO: Support stereo
+            var audio = new DynamicSoundEffectInstance(8000, AudioChannels.Mono)
+            {
+                Pan = pan,
+                Volume = volume
+            };
+            // TODO: Replace with actual audio!
+            audio.SubmitBuffer(data.Concat(data).ToArray());
+            audio.Play();
         }
     }
 }

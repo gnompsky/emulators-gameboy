@@ -15,7 +15,7 @@ namespace GameBoyEmulator.Tests
             // Arrange
 
             // Act
-            var result = Maths.WrappingAdd(a, b, out var halfCarried);
+            var result = a.WrappingAdd(b, out var halfCarried);
 
             // Assert
             Assert.Multiple(() =>
@@ -37,7 +37,7 @@ namespace GameBoyEmulator.Tests
             // Arrange
 
             // Act
-            var result = Maths.WrappingAdd(a, b);
+            var result = a.WrappingAdd(b);
 
             // Assert
             Assert.That(result, Is.EqualTo(expectedResult));

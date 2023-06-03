@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
 
 namespace GameBoyEmulator.Core
 {
@@ -56,7 +57,8 @@ namespace GameBoyEmulator.Core
                 {
                     0x10, ("STOP 0", () =>
                     {
-                        Cpu.Running = false;
+                        Cpu.StopMode = true;
+                        Ram.HardwareRegisters.Timers.WriteValue(HWRegisterWindowHandler.Addresses.DIV, 0);
 
                         // Stop is for some reason 2 bytes wide despite the operand not being used, so we skip forward an extra byte
                         Registers.PC++;

@@ -10,7 +10,6 @@ Cpu.Reset();
 var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/cpu_instrs.gb");
 //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/Tetris (World) (Rev 1).gb");
 Ram.LoadROM(romBytes);
-Ram.SerialCharacterWritten += b => Console.Write((char)b);
 
 while (true)
 {

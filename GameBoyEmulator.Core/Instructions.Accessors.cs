@@ -49,7 +49,7 @@ namespace GameBoyEmulator.Core
 
             public static Action IncN(Action<byte> setter, Func<byte> getter) => () =>
             {
-                var newVal = Maths.WrappingAdd(getter(), 1, out var halfCarried);
+                var newVal = getter().WrappingAdd(1, out var halfCarried);
                 Registers.IsZero = newVal == 0;
                 Registers.IsSubtract = false;
                 Registers.IsHalfCarry = halfCarried;
@@ -59,7 +59,7 @@ namespace GameBoyEmulator.Core
             public static Action AddN(Func<byte> amountGetter) => () =>
             {
                 // TODO: This is almost certainly wrong :(
-                var newVal = Maths.WrappingAdd(Registers.A, amountGetter(), out var halfCarried);
+                var newVal = Registers.A.WrappingAdd(amountGetter(), out var halfCarried);
                 Registers.IsZero = newVal == 0;
                 Registers.IsSubtract = false;
                 Registers.IsCarry = (newVal & 0xFF00) != 0;
@@ -92,7 +92,7 @@ namespace GameBoyEmulator.Core
                 // TODO: This is almost certainly wrong :(
                 var curVal = Registers.A;
                 var amount = amountGetter();
-                var newVal = Maths.WrappingSubtract(curVal, amount, out var halfCarried);
+                var newVal = curVal.WrappingSubtract(amount, out var halfCarried);
                 Registers.IsZero = newVal == 0;
                 Registers.IsSubtract = true;
                 Registers.IsCarry = amount > curVal;

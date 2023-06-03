@@ -26,22 +26,22 @@ namespace GameBoyEmulator.Core
         public static ushort AF
         {
             get => Maths.CombineBytes(F, A);
-            set => Maths.SplitShortTo(value, out F, out A);
+            set => value.SplitToBytes(out F, out A);
         }
         public static ushort BC
         {
             get => Maths.CombineBytes(C, B);
-            set => Maths.SplitShortTo(value, out C, out B);
+            set => value.SplitToBytes(out C, out B);
         }
         public static ushort DE
         {
             get => Maths.CombineBytes(E, D);
-            set => Maths.SplitShortTo(value, out E, out D);
+            set => value.SplitToBytes(out E, out D);
         }
         public static ushort HL
         {
             get => Maths.CombineBytes(L, H);
-            set => Maths.SplitShortTo(value, out L, out H);
+            set => value.SplitToBytes(out L, out H);
         }
         #endregion
 
