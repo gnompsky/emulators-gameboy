@@ -1,32 +1,39 @@
-namespace GameBoyEmulator.Core
+using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
+
+namespace GameBoyEmulator.Core.Components
 {
-    public static class Gpu
+    public class PPU
     {
-        public static event Events.GpuPixelsUpdatedHandler? GpuPixelsUpdated;
+        private readonly LcdHandler _lcd;
+
+        private byte _control;
+        private byte _scrollX;
+        private byte _scrollY;
+        private ulong _lastTicks;
+        private ulong _tick;
+
+        public PPU(Memory memory)
+        {
+            _lcd = memory.LcdHandler;
+        }
         
-        private static byte _control;
-        private static byte _scrollX;
-        private static byte _scrollY;
-        private static ulong _lastTicks;
-        private static ulong _tick;
-        
-        public static void Step()
+        public void Step()
         {
             _tick += Clock.Cycle - _lastTicks;
             _lastTicks = Clock.Cycle;
 	
-            switch(Ram.STAT_Mode) {
+            switch(_lcd.STAT_Mode) {
                 case Modes.HBlank:
                     if(_tick >= 204) {
                         //hblank(); - This only increments the scanline so instead I've just done this on the next line for now
-                        Ram.LY++;
+                        _lcd.LY++;
 				
-                        if(Ram.LY == 143) {
+                        if(_lcd.LY == 143) {
                             //if(interrupt.enable & INTERRUPTS_VBLANK) interrupt.flags |= INTERRUPTS_VBLANK;
 					
-                            Ram.STAT_Mode = Modes.VBlank;
+                            _lcd.STAT_Mode = Modes.VBlank;
                         }
-                        else Ram.STAT_Mode = Modes.Oam;
+                        else _lcd.STAT_Mode = Modes.Oam;
 				
                         _tick -= 204;
                     }
@@ -34,11 +41,11 @@ namespace GameBoyEmulator.Core
 		
                 case Modes.VBlank:
                     if(_tick >= 456) {
-                        Ram.LY++;
+                        _lcd.LY++;
 				
-                        if(Ram.LY > 153) {
-                            Ram.LY = 0;
-                            Ram.STAT_Mode = Modes.Oam;
+                        if(_lcd.LY > 153) {
+                            _lcd.LY = 0;
+                            _lcd.STAT_Mode = Modes.Oam;
                         }
 				
                         _tick -= 456;
@@ -47,13 +54,13 @@ namespace GameBoyEmulator.Core
 
                 case Modes.Oam:
                     if(_tick >= 80) {
-                        Ram.STAT_Mode = Modes.Vram;
+                        _lcd.STAT_Mode = Modes.Vram;
                         _tick -= 80;
                     }
                     break;
                 case Modes.Vram:
                     if(_tick >= 172) {
-                        Ram.STAT_Mode = Modes.HBlank;
+                        _lcd.STAT_Mode = Modes.HBlank;
                         _tick -= 172;
                     }
                     break;
@@ -61,12 +68,12 @@ namespace GameBoyEmulator.Core
                     throw new ArgumentOutOfRangeException();
             }
 
-            // TODO: Debug print, fills LY rows of pixels white
+            // TODO: Debug print, fills LY rows of pixels white 
             var bytes = new byte[256 * 256];
             Array.Fill(bytes, (byte)0x0, 0, bytes.Length);
-            Array.Fill(bytes, (byte)0x1, 0, Ram.LY * 256);
+            Array.Fill(bytes, (byte)0x1, 0, _lcd.LY * 256);
 
-            GpuPixelsUpdated?.Invoke(bytes);
+            //GpuPixelsUpdated?.Invoke(bytes);
         }
     }
 }

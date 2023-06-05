@@ -1,13 +1,13 @@
-namespace GameBoyEmulator.Core
+namespace GameBoyEmulator.Core.Components
 {
-    public static class Interrupts
+    public class Interrupts
     {
-        public static void Fire(byte interrupt)
+        public void Fire(byte interrupt)
         {
             // TODO: Implement interrupts
         }
 
-        public static class Addresses
+        private static class Addresses
         {
             public const byte VBlank = 0x40;
             public const byte STAT = 0x48;

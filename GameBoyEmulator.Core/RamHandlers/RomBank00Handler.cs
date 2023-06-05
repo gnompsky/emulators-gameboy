@@ -1,15 +1,16 @@
 namespace GameBoyEmulator.Core.RamHandlers
 {
-    public class BootstrapWindowHandler : RomWindowHandler
+    public class RomBank00Handler : RomWindowHandler
     {
-        public BootstrapWindowHandler(Func<ushort, byte> valueGetter) 
+        public RomBank00Handler(Func<ushort, byte> valueGetter) 
             : base(valueGetter)
         {
         }
         
         public override byte ReadValue(ushort address)
         {
-            return ValueGetter(0xFF50) == 0x01
+            // 0x0100 or lower is Boostrap ROM if 0xFF50 is not 0x01
+            return address > 0x0100 || ValueGetter(0xFF50) == 0x01
                 ? ValueGetter(address)
                 : BootstrapRom[address];
         }

@@ -1,44 +1,44 @@
-namespace GameBoyEmulator.Core
+namespace GameBoyEmulator.Core.Components
 {
-    public static class Registers
+    public sealed class Registers
     {
-        public static byte A;
-        public static byte B;
-        public static byte C;
-        public static byte D;
-        public static byte E;
-        public static byte F;
-        public static byte H;
-        public static byte L;
+        public byte A;
+        public byte B;
+        public byte C;
+        public byte D;
+        public byte E;
+        public byte F;
+        public byte H;
+        public byte L;
         
-        public static ushort SP;
-        public static ushort PC;
+        public ushort SP;
+        public ushort PC;
 
-        public static bool IME;
+        public bool IME;
 
-        public static void Reset()
+        public void Reset()
         {
             A = B = C = D = E = F = H = L = 0x00;
             SP = PC = 0x0000;
         }
 
         #region Combined Registers
-        public static ushort AF
+        public ushort AF
         {
             get => Maths.CombineBytes(F, A);
             set => value.SplitToBytes(out F, out A);
         }
-        public static ushort BC
+        public ushort BC
         {
             get => Maths.CombineBytes(C, B);
             set => value.SplitToBytes(out C, out B);
         }
-        public static ushort DE
+        public ushort DE
         {
             get => Maths.CombineBytes(E, D);
             set => value.SplitToBytes(out E, out D);
         }
-        public static ushort HL
+        public ushort HL
         {
             get => Maths.CombineBytes(L, H);
             set => value.SplitToBytes(out L, out H);
@@ -46,28 +46,28 @@ namespace GameBoyEmulator.Core
         #endregion
 
         #region Flags
-        public static bool IsZero
+        public bool IsZero
         {
             get => GetFlag(7);
             set => SetFlag(7, value);
         }
-        public static bool IsSubtract
+        public bool IsSubtract
         {
             get => GetFlag(6);
             set => SetFlag(6, value);
         }
-        public static bool IsHalfCarry
+        public bool IsHalfCarry
         {
             get => GetFlag(5);
             set => SetFlag(5, value);
         }
-        public static bool IsCarry
+        public bool IsCarry
         {
             get => GetFlag(4);
             set => SetFlag(4, value);
         }
-        private static bool GetFlag(int bit) => (F & (1 << bit)) != 0;
-        private static void SetFlag(int bit, bool value) => F = (byte)(value ? F | (1 << bit) : F & ~(1 << bit));
+        private bool GetFlag(int bit) => (F & (1 << bit)) != 0;
+        private void SetFlag(int bit, bool value) => F = (byte)(value ? F | (1 << bit) : F & ~(1 << bit));
         #endregion
     }
 }

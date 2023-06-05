@@ -1,4 +1,5 @@
 using GameBoyEmulator.Core;
+using GameBoyEmulator.Core.Components;
 using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
@@ -21,6 +22,7 @@ namespace GameBoyEmulator.WindowsGL
         private const int BUFFER_W = 256;
         private const int BUFFER_H = 256;
         private readonly byte[] _pixelBuffer = new byte[BUFFER_W * BUFFER_H];
+        private DynamicSoundEffectInstance _sound;
 
         private bool _pixelsDirty = true;
         private string _lastInstructionName = "";
@@ -30,8 +32,7 @@ namespace GameBoyEmulator.WindowsGL
         {
             while (Instance._running)
             {
-                Cpu.Step();
-                Gpu.Step();
+                GameBoy.Instance.Step();
                 //DebugPrint();
             }
         });
@@ -48,19 +49,19 @@ namespace GameBoyEmulator.WindowsGL
 
         protected override void Initialize()
         {
-            Cpu.Reset();
+            GameBoy.Instance.Reset();
 
             var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/cpu_instrs.gb");
             //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/Tetris (World) (Rev 1).gb");
-            Ram.LoadROM(romBytes);
+            GameBoy.Instance.LoadROM(romBytes);
 
-            Instructions.InstructionExecuting += name => _lastInstructionName = name;
-            Gpu.GpuPixelsUpdated += bytes =>
-            {
-                Array.Copy(bytes, _pixelBuffer, bytes.Length);
-                _pixelsDirty = true;
-            };
-            Ram.HardwareRegisters.Audio.AudioChannelTriggered += PlayAudio;
+            // Instructions.InstructionExecuting += name => _lastInstructionName = name;
+            // Gpu.GpuPixelsUpdated += bytes =>
+            // {
+            //     Array.Copy(bytes, _pixelBuffer, bytes.Length);
+            //     _pixelsDirty = true;
+            // };
+            _sound = new DynamicSoundEffectInstance(48000, AudioChannels.Stereo);
             
             base.Initialize();
 
@@ -103,6 +104,19 @@ namespace GameBoyEmulator.WindowsGL
             GeneratedTexture.Dispose();
         }
 
+        protected override void Update(GameTime gameTime)
+        {
+            // TODO: Get audio samples and play
+            // var buffer = Ram.HardwareRegisters.Audio.AudioStream.ToArray();
+            // if (buffer.Length > 0)
+            // {
+            //     _sound.SubmitBuffer(buffer);
+            //     _sound.Play();
+            // }
+
+            base.Update(gameTime);
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             SetCameraPosition2D(0, 0);
@@ -141,28 +155,28 @@ namespace GameBoyEmulator.WindowsGL
             _pixelsDirty = false;
         }
         
-        private void DebugPrint()
-        {
-            string ToHexN(byte b) => $"0x{Convert.ToString(b, 16).PadLeft(2, '0').ToUpperInvariant()}";
-            string ToHexNN(ushort w) => $"0x{Convert.ToString(w, 16).PadLeft(4, '0').ToUpperInvariant()}";
-            string ToBinaryN(byte b) => Convert.ToString(b, 2).PadLeft(8, '0')[..4];
-
-            if (Registers.PC >= 0x00)//0x6B)
-            {
-                var spValue = "";
-                try
-                {
-                    spValue = ToHexNN(Ram.GetNN(Registers.SP));
-                    Clock.Cycle -= 8;
-                }
-                catch (IndexOutOfRangeException) {}
-        
-                Console.WriteLine(
-                    $"{_lastInstructionName.PadRight(19)} - PC: {ToHexNN(Registers.PC)}, LY: {ToHexNN(Ram.LY)}, SP: {ToHexNN(Registers.SP)} ({spValue}), A: {ToHexN(Registers.A)}, B: {ToHexN(Registers.B)}, C: {ToHexN(Registers.C)}, D: {ToHexN(Registers.D)}, E: {ToHexN(Registers.E)}, H: {ToHexN(Registers.H)}, L: {ToHexN(Registers.L)}, F: {ToBinaryN(Registers.F)}");
-            }
-    
-            if (_lastInstructionName.StartsWith("0x00E9") && !Registers.IsZero) throw new ApplicationException("Cart check failed. Exiting");
-        }
+        // private void DebugPrint()
+        // {
+        //     string ToHexN(byte b) => $"0x{Convert.ToString(b, 16).PadLeft(2, '0').ToUpperInvariant()}";
+        //     string ToHexNN(ushort w) => $"0x{Convert.ToString(w, 16).PadLeft(4, '0').ToUpperInvariant()}";
+        //     string ToBinaryN(byte b) => Convert.ToString(b, 2).PadLeft(8, '0')[..4];
+        //
+        //     if (Registers.PC >= 0x00)//0x6B)
+        //     {
+        //         var spValue = "";
+        //         try
+        //         {
+        //             spValue = ToHexNN(Ram.GetNN(Registers.SP));
+        //             Clock.Cycle -= 8;
+        //         }
+        //         catch (IndexOutOfRangeException) {}
+        //
+        //         Console.WriteLine(
+        //             $"{_lastInstructionName.PadRight(19)} - PC: {ToHexNN(Registers.PC)}, LY: {ToHexNN(Ram.LY)}, SP: {ToHexNN(Registers.SP)} ({spValue}), A: {ToHexN(Registers.A)}, B: {ToHexN(Registers.B)}, C: {ToHexN(Registers.C)}, D: {ToHexN(Registers.D)}, E: {ToHexN(Registers.E)}, H: {ToHexN(Registers.H)}, L: {ToHexN(Registers.L)}, F: {ToBinaryN(Registers.F)}");
+        //     }
+        //
+        //     if (_lastInstructionName.StartsWith("0x00E9") && !Registers.IsZero) throw new ApplicationException("Cart check failed. Exiting");
+        // }
         
         private void SetStates()
         {
@@ -221,31 +235,6 @@ namespace GameBoyEmulator.WindowsGL
             }
 
             GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, quad, 0, 4, indices, 0, 2);
-        }
-
-        private void PlayAudio(int channel, int pan, byte[] data)
-        {
-            switch (channel)
-            {
-                case 1:
-                    PlayAudioChannel1(pan, data);
-                    break;
-            }
-        }
-
-        private void PlayAudioChannel1(int pan, byte[] data)
-        {
-            var volume = 1;
-
-            // TODO: Support stereo
-            var audio = new DynamicSoundEffectInstance(8000, AudioChannels.Mono)
-            {
-                Pan = pan,
-                Volume = volume
-            };
-            // TODO: Replace with actual audio!
-            audio.SubmitBuffer(data.Concat(data).ToArray());
-            audio.Play();
         }
     }
 }
