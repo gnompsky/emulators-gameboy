@@ -2,11 +2,11 @@ using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
 
 namespace GameBoyEmulator.Core.RamHandlers
 {
-    public class OAMWindowHandler : RamWindowHandler
+    public class OamHandler : RamWindowHandler
     {
         private readonly LcdHandler _lcdHandler;
 
-        public OAMWindowHandler(Func<ushort, byte> valueGetter, Action<ushort, byte> valueSetter, LcdHandler lcdHandler) 
+        public OamHandler(Func<ushort, byte> valueGetter, Action<ushort, byte> valueSetter, LcdHandler lcdHandler) 
             : base(valueGetter, valueSetter)
         {
             _lcdHandler = lcdHandler;

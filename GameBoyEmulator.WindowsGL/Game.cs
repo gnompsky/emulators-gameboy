@@ -1,10 +1,8 @@
 using GameBoyEmulator.Core;
-using GameBoyEmulator.Core.Components;
-using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
+using GameBoyEmulator.Core.DataTypes;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Media;
 
 namespace GameBoyEmulator.WindowsGL
 {
@@ -19,12 +17,9 @@ namespace GameBoyEmulator.WindowsGL
         public static float camera2DrotationZ = 0f;
         
         private readonly GraphicsDeviceManager _graphics;
-        private const int BUFFER_W = 256;
-        private const int BUFFER_H = 256;
-        private readonly byte[] _pixelBuffer = new byte[BUFFER_W * BUFFER_H];
+        private const int BUFFER_W = 160;
+        private const int BUFFER_H = 144;
         private DynamicSoundEffectInstance _sound;
-
-        private bool _pixelsDirty = true;
         private string _lastInstructionName = "";
         private bool _running = true;
 
@@ -33,6 +28,7 @@ namespace GameBoyEmulator.WindowsGL
             while (Instance._running)
             {
                 GameBoy.Instance.Step();
+                Thread.Sleep(100);
                 //DebugPrint();
             }
         });
@@ -42,8 +38,8 @@ namespace GameBoyEmulator.WindowsGL
             Instance = this;
             
             _graphics = new GraphicsDeviceManager(this);
-            _graphics.PreferredBackBufferWidth = BUFFER_W;
-            _graphics.PreferredBackBufferHeight = BUFFER_H;
+            _graphics.PreferredBackBufferWidth = BUFFER_W * 5;
+            _graphics.PreferredBackBufferHeight = BUFFER_H * 5;
             _graphics.ApplyChanges();
         }
 
@@ -53,14 +49,8 @@ namespace GameBoyEmulator.WindowsGL
 
             var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/cpu_instrs.gb");
             //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/Tetris (World) (Rev 1).gb");
-            GameBoy.Instance.LoadROM(romBytes);
+            GameBoy.Instance.LoadRom(romBytes);
 
-            // Instructions.InstructionExecuting += name => _lastInstructionName = name;
-            // Gpu.GpuPixelsUpdated += bytes =>
-            // {
-            //     Array.Copy(bytes, _pixelBuffer, bytes.Length);
-            //     _pixelsDirty = true;
-            // };
             _sound = new DynamicSoundEffectInstance(48000, AudioChannels.Stereo);
             
             base.Initialize();
@@ -117,42 +107,50 @@ namespace GameBoyEmulator.WindowsGL
             base.Update(gameTime);
         }
 
+        private int curX = 0;
+        private int curY = 0;
+
+        private bool done = false;
         protected override void Draw(GameTime gameTime)
         {
             SetCameraPosition2D(0, 0);
-            
-            if (!_pixelsDirty)
-            {
-                base.Draw(gameTime);
-                return;
-            }
-            
+
             SetStates();
             SetUpBasicEffect();
             
             var cellW = (Viewport.Width / BUFFER_W) * 1;
             var cellH = (Viewport.Height / BUFFER_H) * 1;
             
-            GraphicsDevice.Clear(Color.Black);
-
-            for (var x = 0; x < BUFFER_H; x++)
+            while (GameBoy.Instance.Pixels.TryDequeue(out var pixel))
             {
-                for (var y = 0; y < BUFFER_H; y++)
+                if (!done)
                 {
-                    var b = _pixelBuffer[(y * BUFFER_H) + x];
-                    if (b == 0x0) continue;
-                    
-                    var drawingRectangle = new Rectangle(x * cellW, y * cellH, cellW, cellH);
+                    var drawingRectangle = new Rectangle(curX * cellW, curY * cellH, cellW, cellH);
                     foreach (var pass in BasicEffect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
-                        DrawUserIndexedVertexRectangle(drawingRectangle);       
+                        DrawUserIndexedVertexRectangle(drawingRectangle, pixel.Color);
+                    }
+
+                    //done = true;
+                }
+
+                Console.Write("x");
+                curX++;
+                if (curX >= BUFFER_W)
+                {
+                    curX = 0;
+                    curY++;
+                    Console.WriteLine();
+
+                    if (curY >= BUFFER_H)
+                    {
+                        curY = 0;
                     }
                 }
             }
-            
+
             base.Draw(gameTime);
-            _pixelsDirty = false;
         }
         
         // private void DebugPrint()
@@ -214,13 +212,22 @@ namespace GameBoyEmulator.WindowsGL
             camera2DScrollLookAt.Z = 0;
         }
         
-        private void DrawUserIndexedVertexRectangle(Rectangle r)
+        private void DrawUserIndexedVertexRectangle(Rectangle r, Colors color)
         {
+            Color c = color switch
+            {
+                Colors.White => new Color(155, 188, 15),
+                Colors.LightGrey => new Color(139, 172, 15),
+                Colors.DarkGrey => new Color(48, 98, 48),
+                Colors.Black => new Color(15, 56, 16),
+                _ => throw new ArgumentOutOfRangeException(nameof(color), color, null)
+            };
+
             var quad = new VertexPositionColorTexture[6];
-            quad[0] = new VertexPositionColorTexture(new Vector3(r.Left, r.Top, 0f), Color.White, new Vector2(0f, 0f));
-            quad[1] = new VertexPositionColorTexture(new Vector3(r.Left, r.Bottom, 0f), Color.White, new Vector2(0f, 1f));
-            quad[2] = new VertexPositionColorTexture(new Vector3(r.Right, r.Bottom, 0f), Color.White, new Vector2(1f, 1f));
-            quad[3] = new VertexPositionColorTexture(new Vector3(r.Right, r.Top, 0f), Color.White, new Vector2(1f, 0f));
+            quad[0] = new VertexPositionColorTexture(new Vector3(r.Left, r.Top, 0f), c, new Vector2(0f, 0f));
+            quad[1] = new VertexPositionColorTexture(new Vector3(r.Left, r.Bottom, 0f), c, new Vector2(0f, 1f));
+            quad[2] = new VertexPositionColorTexture(new Vector3(r.Right, r.Bottom, 0f), c, new Vector2(1f, 1f));
+            quad[3] = new VertexPositionColorTexture(new Vector3(r.Right, r.Top, 0f), c, new Vector2(1f, 0f));
 
             var indices = new short[6];
             if (GraphicsDevice.RasterizerState == RasterizerState.CullClockwise)

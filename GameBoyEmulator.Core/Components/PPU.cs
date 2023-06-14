@@ -1,27 +1,32 @@
+using GameBoyEmulator.Core.DataTypes;
 using GameBoyEmulator.Core.RamHandlers.HardwareRegisters;
 
 namespace GameBoyEmulator.Core.Components
 {
     public class PPU
     {
+        public readonly PixelFifo BackgroundFifo = new PixelFifo();
+        public readonly PixelFifo OamFifo = new PixelFifo();
+        
+        private readonly InterruptHandler _interrupts;
         private readonly LcdHandler _lcd;
 
-        private byte _control;
-        private byte _scrollX;
-        private byte _scrollY;
-        private ulong _lastTicks;
-        private ulong _tick;
+        private readonly PixelFetcher _pixelFetcher;
+
+        private int _tick;
 
         public PPU(Memory memory)
         {
+            _interrupts = memory.InterruptHandler;
             _lcd = memory.LcdHandler;
+
+            _pixelFetcher = new PixelFetcher(_lcd, memory.VRamHandler, memory.OamHandler, BackgroundFifo);
         }
-        
-        public void Step()
+
+        public void Step(int cyclesTaken)
         {
-            _tick += Clock.Cycle - _lastTicks;
-            _lastTicks = Clock.Cycle;
-	
+            _tick += cyclesTaken;
+
             switch(_lcd.STAT_Mode) {
                 case Modes.HBlank:
                     if(_tick >= 204) {
@@ -29,7 +34,7 @@ namespace GameBoyEmulator.Core.Components
                         _lcd.LY++;
 				
                         if(_lcd.LY == 143) {
-                            //if(interrupt.enable & INTERRUPTS_VBLANK) interrupt.flags |= INTERRUPTS_VBLANK;
+                            _interrupts.RequestInterrupt(InterruptHandler.Interrupt.VBlank);
 					
                             _lcd.STAT_Mode = Modes.VBlank;
                         }
@@ -55,10 +60,13 @@ namespace GameBoyEmulator.Core.Components
                 case Modes.Oam:
                     if(_tick >= 80) {
                         _lcd.STAT_Mode = Modes.Vram;
+                        BackgroundFifo.Clear();
+                        OamFifo.Clear();
                         _tick -= 80;
                     }
                     break;
                 case Modes.Vram:
+                    _pixelFetcher.Step(_tick);
                     if(_tick >= 172) {
                         _lcd.STAT_Mode = Modes.HBlank;
                         _tick -= 172;
@@ -67,13 +75,6 @@ namespace GameBoyEmulator.Core.Components
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            // TODO: Debug print, fills LY rows of pixels white 
-            var bytes = new byte[256 * 256];
-            Array.Fill(bytes, (byte)0x0, 0, bytes.Length);
-            Array.Fill(bytes, (byte)0x1, 0, _lcd.LY * 256);
-
-            //GpuPixelsUpdated?.Invoke(bytes);
         }
     }
 }

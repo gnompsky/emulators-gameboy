@@ -1,31 +1,33 @@
 using GameBoyEmulator.Core.Components;
+using GameBoyEmulator.Core.DataTypes;
 
 namespace GameBoyEmulator.Core
 {
     public class GameBoy
     {
         public static readonly GameBoy Instance = new GameBoy();
+        public PixelFifo Pixels => _ppu.BackgroundFifo;
 
-        private readonly Registers Registers;
-        private readonly Memory Memory;
-        private readonly Instructions Instructions;
-        private readonly PPU PPU;
+        private readonly Registers _registers;
+        private readonly Memory _memory;
+        private readonly Instructions _instructions;
+        private readonly PPU _ppu;
         
         public bool StopMode = false;
 
-        public GameBoy()
+        private GameBoy()
         {
-            Registers = new Registers();
-            Memory = new Memory();
-            Instructions = new Instructions(this, Registers, Memory);
-            PPU = new PPU(Memory);
+            _registers = new Registers();
+            _memory = new Memory(_registers);
+            _instructions = new Instructions(this, _registers, _memory);
+            _ppu = new PPU(_memory);
         }
         
         public void Reset()
         {
             StopMode = false;
-            Registers.Reset();
-            Memory.Reset();
+            _registers.Reset();
+            _memory.Reset();
         }
 
         public void Step()
@@ -34,17 +36,16 @@ namespace GameBoyEmulator.Core
 
             if (!StopMode)
             {
-                var instruction = Memory.GetN(Registers.PC, ref cyclesTaken);
-                Instructions.Execute(instruction, ref cyclesTaken);
+                _instructions.ExecuteNext(ref cyclesTaken);
             }
 
-            Memory.Step(cyclesTaken);
-            PPU.Step();
+            _memory.Step(cyclesTaken);
+            _ppu.Step(cyclesTaken);
         }
         
-        public void LoadROM(byte[] romBytes)
+        public void LoadRom(byte[] romBytes)
         {
-            Memory.LoadROM(romBytes);
+            _memory.LoadROM(romBytes);
             Reset();
         }
     }

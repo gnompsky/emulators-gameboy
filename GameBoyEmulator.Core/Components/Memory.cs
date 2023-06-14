@@ -6,26 +6,34 @@ namespace GameBoyEmulator.Core.Components
 {
     public class Memory
     {
+        public readonly VRamHandler VRamHandler;
+        public readonly OamHandler OamHandler;
+        public readonly InterruptHandler InterruptHandler;
         public readonly TimerAndDividerHandler TimerAndDividerHandler;
         public readonly LcdHandler LcdHandler;
         
         private readonly byte[] _memory = new byte[0xFFFF + 1];
         private readonly RangeList<ushort, RamWindowHandler> _windowHandlers;
 
-        public Memory()
+        public Memory(Registers registers)
         {
             byte ReadByte(ushort address) => _memory[address];
             void WriteByte(ushort address, byte value) => _memory[address] = value;
 
-            TimerAndDividerHandler = new TimerAndDividerHandler(ReadByte, WriteByte);
-            LcdHandler = new LcdHandler(ReadByte, WriteByte);
+            InterruptHandler = new InterruptHandler(ReadByte, WriteByte, registers);
+            TimerAndDividerHandler = new TimerAndDividerHandler(ReadByte, WriteByte, InterruptHandler);
+            LcdHandler = new LcdHandler(ReadByte, WriteByte, InterruptHandler);
+            VRamHandler = new VRamHandler(ReadByte, WriteByte, LcdHandler);
+            OamHandler = new OamHandler(ReadByte, WriteByte, LcdHandler);
 
             _windowHandlers = new RangeList<ushort, RamWindowHandler>
             {
                 { (0x0000, 0x3FFF), new RomBank00Handler(ReadByte) },
                 { (0x4000, 0x7FFF), new RomBankNNHandler(ReadByte) },
+                { (0x8000, 0x9FFF), VRamHandler },
+                // { (0xA000, 0xBFFF), new ExternalRamHandler(ReadByte) },
                 { (0xC000, 0xFDFF), new WRamHandler(ReadByte, WriteByte, 0xE000) },
-                { (0xFE00, 0xFE9F), new OAMWindowHandler(ReadByte, WriteByte, LcdHandler) },
+                { (0xFE00, 0xFE9F), OamHandler },
                 { (0xFEA0, 0xFEFF), new ProhibitedAddressHandler() },
                 { (0xFF00, 0xFF00), new JoypadHandler(ReadByte, WriteByte) },
                 { (0xFF01, 0xFF02), new SerialHandler(ReadByte, WriteByte) },
@@ -34,7 +42,8 @@ namespace GameBoyEmulator.Core.Components
                 { (0xFF30, 0xFF3F), new WavePatternHandler(ReadByte, WriteByte) },
                 { (0xFF40, 0xFF4B), LcdHandler },
                 { (0xFF80, 0xFFFE), new HRamHandler(ReadByte, WriteByte) },
-                // TODO: { (0xFFFF, 0xFFFF), new InteruptHandler(WriteByte) },
+                { (0xFF0F, 0xFF0F), InterruptHandler },
+                { (0xFFFF, 0xFFFF), InterruptHandler },
             };
         }
 

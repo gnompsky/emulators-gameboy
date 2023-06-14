@@ -757,10 +757,10 @@ namespace GameBoyEmulator.Core.Components
                 }
             );
         }
-    
-        public void Execute(byte instruction, ref int cycles) => ExecuteFrom(_map, instruction, ref cycles);
 
-        private void ExecuteFrom(IReadOnlyDictionary<byte, (string name, ExecuteDelegate execute)> map, byte instruction, ref int cycles)
+        public void ExecuteNext(ref int cycles) => ExecuteFrom(_map, GetNextN(ref cycles), ref cycles);
+
+        private static void ExecuteFrom(IReadOnlyDictionary<byte, (string name, ExecuteDelegate execute)> map, byte instruction, ref int cycles)
         {
             var (instructionName, execute) = map[instruction];
             execute(ref cycles);

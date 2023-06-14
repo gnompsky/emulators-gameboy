@@ -4,12 +4,16 @@ namespace GameBoyEmulator.Core.RamHandlers.HardwareRegisters
 {
     public class TimerAndDividerHandler : RamWindowHandler
     {
+        private readonly InterruptHandler _interrupts;
+
         private int _cyclesSinceLastDiv;
         private int _cyclesSinceLastTima;
 
-        public TimerAndDividerHandler(Func<ushort, byte> valueGetter, Action<ushort, byte> valueSetter) 
+        public TimerAndDividerHandler(Func<ushort, byte> valueGetter, Action<ushort, byte> valueSetter,
+            InterruptHandler interrupts)
             : base(valueGetter, valueSetter)
         {
+            _interrupts = interrupts;
         }
 
         public void ClearDiv()
@@ -62,8 +66,7 @@ namespace GameBoyEmulator.Core.RamHandlers.HardwareRegisters
                 if (result > 0xFF)
                 {
                     ValueSetter(Memory.Addresses.TIMA, ValueGetter(Memory.Addresses.TMA));
-                    // TODO: Fire interrupt
-                    //Interrupts.Fire(Interrupts.Addresses.Timer);
+                    _interrupts.RequestInterrupt(InterruptHandler.Interrupt.Timer);
                 }
                 else
                 {
