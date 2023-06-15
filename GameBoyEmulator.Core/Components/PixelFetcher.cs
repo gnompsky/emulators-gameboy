@@ -49,8 +49,12 @@ namespace GameBoyEmulator.Core.Components
                     _state = State.Push;
                     break;
                 case State.Push:
-                    Push();
-                    _state = State.GetTile;
+                    if (TryPush())
+                    {
+                        // If we weren't able to push, try again later
+                        _state = State.GetTile;
+                    }
+
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -83,8 +87,10 @@ namespace GameBoyEmulator.Core.Components
             return _vRam.ReadValue(tileDataAddress);
         }
 
-        private void Push()
+        private bool TryPush()
         {
+            if (_backgroundFifo.Count > 8) return false;
+            
             for (var bit = 0; bit < 8; bit++)
             {
                 var color = (Colors)(
@@ -97,6 +103,8 @@ namespace GameBoyEmulator.Core.Components
                 if (color != Colors.Black) Console.WriteLine("Enqueing " + color);
                 _backgroundFifo.Enqueue(new Pixel(color, palette, backgroundPriority));
             }
+
+            return true;
         }
 
         private enum State

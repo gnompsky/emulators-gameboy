@@ -13,7 +13,7 @@ namespace GameBoyEmulator.Core.DataTypes
         
         public void Enqueue(Pixel item)
         {
-            // TODO: if (_fifo.Count >= MaxItems) throw new IndexOutOfRangeException();
+            if (_fifo.Count >= MaxItems) throw new IndexOutOfRangeException();
 
             _fifo.Enqueue(item);
         }
