@@ -30,7 +30,7 @@ namespace GameBoyEmulator.Core.RamHandlers
         /// </summary>
         private bool CanAccess(ushort address)
         {
-            var statMode = _lcdHandler.STAT_Mode;
+            var statMode = _lcdHandler.STATMode;
             if (statMode is not (Modes.Oam or Modes.Vram)) return true;
 
             return statMode == Modes.Vram && address is < 0xFE69 or > 0xFE6B;

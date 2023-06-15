@@ -23,13 +23,12 @@ namespace GameBoyEmulator.Core.Components
 
             void NotImpl(ref int cycles)
             {
-                string ToHex(byte b) => $"0x{Convert.ToString(b, 16).PadLeft(2, '0').ToUpperInvariant()}";
-
                 // We're dead in the water here so it's ok to fuck with the PC
                 // We want to print out the current instruction and next 2 bytes for debugging
-                registers.PC--;
+                var pc = registers.PC--;
                 var getNext = GetNextN;
-                var message = $"{ToHex(getNext(ref cycles))} ({ToHex(getNext(ref cycles))} {ToHex(getNext(ref cycles))})";
+                var nextInstr = getNext(ref cycles);
+                var message = $"{pc.ToHex()} - {_map[nextInstr].name} - ([{nextInstr.ToHex()}] {getNext(ref cycles).ToHex()} {getNext(ref cycles).ToHex()})";
                 throw new NotImplementedException(message);
             }
 
@@ -337,7 +336,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0xCC, ("CALL Z,a16", CallIf(GetZero, GetNextNN)) },
                     { 0xCD, ("CALL a16", Call(GetNextNN)) },
                     { 0xCE, ("ADC A,d8", AdcN(GetNextN)) },
-                    { 0xCF, ("RST 08H", NotImpl) },
+                    { 0xCF, ("RST 08H", Call((ref int _) => 0x0008)) },
 
 #endregion
 
@@ -364,7 +363,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0xDC, ("CALL C,a16", CallIf(GetCarry, GetNextNN)) },
                     // 0xDD - Non-existent
                     { 0xDE, ("SBC A,d8", SbcN(GetNextN)) },
-                    { 0xDF, ("RST 18H", NotImpl) },
+                    { 0xDF, ("RST 18H", Call((ref int _) => 0x0018)) },
 
 #endregion
 
@@ -385,7 +384,7 @@ namespace GameBoyEmulator.Core.Components
                     // 0xEC - Non-existent
                     // 0xED - Non-existent
                     { 0xEE, ("XOR d8", Xor(GetNextN)) },
-                    { 0xEF, ("RST 28H", NotImpl) },
+                    { 0xEF, ("RST 28H", Call((ref int _) => 0x0028)) },
 
 #endregion
 
@@ -412,7 +411,7 @@ namespace GameBoyEmulator.Core.Components
                     // 0xFC - Non-existent
                     // 0xFD - Non-existent
                     { 0xFE, ("CP d8", Compare(GetNextN)) },
-                    { 0xFF, ("RST 38H", NotImpl) },
+                    { 0xFF, ("RST 38H", Call((ref int _) => 0x0038)) },
 
 #endregion
                 }

@@ -7,7 +7,7 @@ namespace GameBoyEmulator.Core.RamHandlers
     {
         private readonly LcdHandler _lcdHandler;
 
-        private bool AccessDenied => _lcdHandler.STAT_Mode == Modes.Vram;
+        private bool AccessDenied => _lcdHandler.STATMode == Modes.Vram;
 
         public VRamHandler(Func<ushort, byte> valueGetter, Action<ushort, byte> valueSetter, LcdHandler lcdHandler) 
             : base(valueGetter, valueSetter)

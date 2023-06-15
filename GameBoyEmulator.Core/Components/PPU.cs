@@ -27,7 +27,7 @@ namespace GameBoyEmulator.Core.Components
         {
             _tick += cyclesTaken;
 
-            switch(_lcd.STAT_Mode) {
+            switch(_lcd.STATMode) {
                 case Modes.HBlank:
                     if(_tick >= 204) {
                         //hblank(); - This only increments the scanline so instead I've just done this on the next line for now
@@ -36,9 +36,9 @@ namespace GameBoyEmulator.Core.Components
                         if(_lcd.LY == 143) {
                             _interrupts.RequestInterrupt(InterruptHandler.Interrupt.VBlank);
 					
-                            _lcd.STAT_Mode = Modes.VBlank;
+                            _lcd.STATMode = Modes.VBlank;
                         }
-                        else _lcd.STAT_Mode = Modes.Oam;
+                        else _lcd.STATMode = Modes.Oam;
 				
                         _tick -= 204;
                     }
@@ -50,7 +50,7 @@ namespace GameBoyEmulator.Core.Components
 				
                         if(_lcd.LY > 153) {
                             _lcd.LY = 0;
-                            _lcd.STAT_Mode = Modes.Oam;
+                            _lcd.STATMode = Modes.Oam;
                         }
 				
                         _tick -= 456;
@@ -59,7 +59,7 @@ namespace GameBoyEmulator.Core.Components
 
                 case Modes.Oam:
                     if(_tick >= 80) {
-                        _lcd.STAT_Mode = Modes.Vram;
+                        _lcd.STATMode = Modes.Vram;
                         BackgroundFifo.Clear();
                         OamFifo.Clear();
                         _tick -= 80;
@@ -68,7 +68,7 @@ namespace GameBoyEmulator.Core.Components
                 case Modes.Vram:
                     _pixelFetcher.Step(_tick);
                     if(_tick >= 172) {
-                        _lcd.STAT_Mode = Modes.HBlank;
+                        _lcd.STATMode = Modes.HBlank;
                         _tick -= 172;
                     }
                     break;

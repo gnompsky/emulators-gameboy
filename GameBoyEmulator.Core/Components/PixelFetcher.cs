@@ -90,18 +90,20 @@ namespace GameBoyEmulator.Core.Components
         private bool TryPush()
         {
             if (_backgroundFifo.Count > 8) return false;
+
+            var palette = _lcd.BGP;
             
             for (var bit = 0; bit < 8; bit++)
             {
-                var color = (Colors)(
+                var colorIndex = (
                     (_curTileDataLow.BitIsSet(bit) ? 0b10 : 0b00) |
                     (_curTileDataHigh.BitIsSet(bit) ? 0b01 : 0b00)
                 );
+                var color = palette[colorIndex];
 
-                var palette = Pixel.Palettes.OBP0;
+                //TODO: ??? - var palette = Pixel.Palettes.OBP0;
                 var backgroundPriority = Pixel.BackgroundPriorities.ObjFirst;
-                if (color != Colors.Black) Console.WriteLine("Enqueueing " + color);
-                _backgroundFifo.Enqueue(new Pixel(color, palette, backgroundPriority));
+                _backgroundFifo.Enqueue(new Pixel(color, Pixel.Palettes.OBP0, backgroundPriority));
             }
 
             return true;
