@@ -1,4 +1,6 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
+using GameBoyEmulator.Core.Extensions;
 
 namespace GameBoyEmulator.Core.Components
 {
@@ -758,7 +760,16 @@ namespace GameBoyEmulator.Core.Components
             );
         }
 
-        public void ExecuteNext(ref int cycles) => ExecuteFrom(_map, GetNextN(ref cycles), ref cycles);
+        public void ExecuteNext(ref int cycles)
+        {
+            if (_registers.PC == 0x00E9)
+            {
+                Console.Error.WriteLine("Logo check failed. Skipping");
+                _registers.PC = 0x00FC;
+            }
+
+            ExecuteFrom(_map, GetNextN(ref cycles), ref cycles);
+        }
 
         private static void ExecuteFrom(IReadOnlyDictionary<byte, (string name, ExecuteDelegate execute)> map, byte instruction, ref int cycles)
         {

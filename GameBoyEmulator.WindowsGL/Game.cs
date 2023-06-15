@@ -1,7 +1,7 @@
+using System.Diagnostics;
 using GameBoyEmulator.Core;
 using GameBoyEmulator.Core.DataTypes;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace GameBoyEmulator.WindowsGL
@@ -15,21 +15,37 @@ namespace GameBoyEmulator.WindowsGL
         public static Vector3 camera2DScrollPosition = new Vector3(0, 0, -1);
         public static Vector3 camera2DScrollLookAt = new Vector3(0, 0, 0);
         public static float camera2DrotationZ = 0f;
-        
-        private readonly GraphicsDeviceManager _graphics;
+
         private const int BUFFER_W = 160;
         private const int BUFFER_H = 144;
-        private DynamicSoundEffectInstance _sound;
-        private string _lastInstructionName = "";
+        private readonly Colors[][] _buffer;
+        //private DynamicSoundEffectInstance _sound;
         private bool _running = true;
 
-        private Thread _emulatorThread = new Thread(() =>
+        private readonly Thread _emulatorThread = new Thread((bufferObj) =>
         {
+            if (!(bufferObj is Colors[][] buffer)) throw new Exception("Expected Colors[][]");
+            
+            var curX = 0;
+            var curY = 0;
+            var sw = new Stopwatch();
+            int steps = 0;
             while (Instance._running)
             {
+                sw.Restart();
                 GameBoy.Instance.Step();
-                Thread.Sleep(100);
-                //DebugPrint();
+                if (GameBoy.Instance.Pixels.Count >= 8)
+                {
+                    PushPixels(buffer, ref curX, ref curY);
+                }
+                steps++;
+                if (steps >= 70224)
+                {
+                    var sleep = (int)Math.Max(0, 16 - sw.ElapsedMilliseconds);
+                    //Console.WriteLine("FRAME. FT: " + sw.ElapsedMilliseconds + "ms Sleeping: " + sleep + "ms");
+                    //Thread.Sleep(sleep);
+                    steps = 0;
+                }
             }
         });
 
@@ -37,10 +53,12 @@ namespace GameBoyEmulator.WindowsGL
         {
             Instance = this;
             
-            _graphics = new GraphicsDeviceManager(this);
-            _graphics.PreferredBackBufferWidth = BUFFER_W * 5;
-            _graphics.PreferredBackBufferHeight = BUFFER_H * 5;
-            _graphics.ApplyChanges();
+            var graphics = new GraphicsDeviceManager(this);
+            graphics.PreferredBackBufferWidth = BUFFER_W * 5;
+            graphics.PreferredBackBufferHeight = BUFFER_H * 5;
+            graphics.ApplyChanges();
+
+            _buffer = InitBuffer();
         }
 
         protected override void Initialize()
@@ -51,11 +69,11 @@ namespace GameBoyEmulator.WindowsGL
             //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/Tetris (World) (Rev 1).gb");
             GameBoy.Instance.LoadRom(romBytes);
 
-            _sound = new DynamicSoundEffectInstance(48000, AudioChannels.Stereo);
+            //_sound = new DynamicSoundEffectInstance(48000, AudioChannels.Stereo);
             
             base.Initialize();
 
-            _emulatorThread.Start();
+            _emulatorThread.Start(_buffer);
         }
 
         protected override void OnExiting(object sender, EventArgs args)
@@ -107,10 +125,6 @@ namespace GameBoyEmulator.WindowsGL
             base.Update(gameTime);
         }
 
-        private int curX = 0;
-        private int curY = 0;
-
-        private bool done = false;
         protected override void Draw(GameTime gameTime)
         {
             SetCameraPosition2D(0, 0);
@@ -120,61 +134,22 @@ namespace GameBoyEmulator.WindowsGL
             
             var cellW = (Viewport.Width / BUFFER_W) * 1;
             var cellH = (Viewport.Height / BUFFER_H) * 1;
-            
-            while (GameBoy.Instance.Pixels.TryDequeue(out var pixel))
+
+            for (var x = 0; x < BUFFER_W; x++)
             {
-                if (!done)
+                for (var y = 0; y < BUFFER_H; y++)
                 {
-                    var drawingRectangle = new Rectangle(curX * cellW, curY * cellH, cellW, cellH);
+                    var drawingRectangle = new Rectangle(x * cellW, y * cellH, cellW, cellH);
                     foreach (var pass in BasicEffect.CurrentTechnique.Passes)
                     {
                         pass.Apply();
-                        DrawUserIndexedVertexRectangle(drawingRectangle, pixel.Color);
-                    }
-
-                    //done = true;
-                }
-
-                Console.Write("x");
-                curX++;
-                if (curX >= BUFFER_W)
-                {
-                    curX = 0;
-                    curY++;
-                    Console.WriteLine();
-
-                    if (curY >= BUFFER_H)
-                    {
-                        curY = 0;
-                    }
+                        DrawUserIndexedVertexRectangle(drawingRectangle, _buffer[x][y]);
+                    }                    
                 }
             }
 
             base.Draw(gameTime);
         }
-        
-        // private void DebugPrint()
-        // {
-        //     string ToHexN(byte b) => $"0x{Convert.ToString(b, 16).PadLeft(2, '0').ToUpperInvariant()}";
-        //     string ToHexNN(ushort w) => $"0x{Convert.ToString(w, 16).PadLeft(4, '0').ToUpperInvariant()}";
-        //     string ToBinaryN(byte b) => Convert.ToString(b, 2).PadLeft(8, '0')[..4];
-        //
-        //     if (Registers.PC >= 0x00)//0x6B)
-        //     {
-        //         var spValue = "";
-        //         try
-        //         {
-        //             spValue = ToHexNN(Ram.GetNN(Registers.SP));
-        //             Clock.Cycle -= 8;
-        //         }
-        //         catch (IndexOutOfRangeException) {}
-        //
-        //         Console.WriteLine(
-        //             $"{_lastInstructionName.PadRight(19)} - PC: {ToHexNN(Registers.PC)}, LY: {ToHexNN(Ram.LY)}, SP: {ToHexNN(Registers.SP)} ({spValue}), A: {ToHexN(Registers.A)}, B: {ToHexN(Registers.B)}, C: {ToHexN(Registers.C)}, D: {ToHexN(Registers.D)}, E: {ToHexN(Registers.E)}, H: {ToHexN(Registers.H)}, L: {ToHexN(Registers.L)}, F: {ToBinaryN(Registers.F)}");
-        //     }
-        //
-        //     if (_lastInstructionName.StartsWith("0x00E9") && !Registers.IsZero) throw new ApplicationException("Cart check failed. Exiting");
-        // }
         
         private void SetStates()
         {
@@ -242,6 +217,32 @@ namespace GameBoyEmulator.WindowsGL
             }
 
             GraphicsDevice.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, quad, 0, 4, indices, 0, 2);
+        }
+
+        private static void PushPixels(Colors[][] buffer, ref int curX, ref int curY)
+        {
+            while (GameBoy.Instance.Pixels.TryDequeue(out var pixel))
+            {
+                buffer[curX][curY] = pixel.Color;
+
+                if (++curX < BUFFER_W) continue;
+                curX = 0;
+                
+                if (++curY < BUFFER_H) continue;
+                curY = 0;
+            }
+        }
+
+        private static Colors[][] InitBuffer()
+        {
+            var buffer = new Colors[BUFFER_W][];
+            for (var x = 0; x < BUFFER_W; x++)
+            {
+                buffer[x] = new Colors[BUFFER_H];
+                Array.Fill(buffer[x], Colors.Black);
+            }
+
+            return buffer;
         }
     }
 }
