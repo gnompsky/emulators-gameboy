@@ -93,23 +93,25 @@ namespace GameBoyEmulator.Core.RamHandlers.HardwareRegisters
                 UpdateLYCEqualsLYFlag();
             }
         }
-        
-        public Colors[] BGP {
-            get
+
+        public Colors[] BGP => GetPaletteColors(BGPAddr);
+        public Colors[] OBP0 => GetPaletteColors(OBP0Addr);
+        public Colors[] OBP1 => GetPaletteColors(OBP1Addr);
+
+        private Colors[] GetPaletteColors(ushort address)
+        {
+            var colors = new Colors[4];
+            var paletteByte = ValueGetter(address);
+
+            for (var bit = 0; bit < 8; bit += 2)
             {
-                var colors = new Colors[4];
-                var paletteByte = ValueGetter(BGPAddr);
-
-                for (var bit = 0; bit < 8; bit += 2)
-                {
-                    colors[bit / 2] = (Colors)(
-                        (paletteByte.BitIsSet(bit) ? 0b10 : 0b00) |
-                        (paletteByte.BitIsSet(bit + 1) ? 0b01 : 0b00)
-                    );
-                }
-
-                return colors;
+                colors[bit / 2] = (Colors)(
+                    (paletteByte.BitIsSet(bit) ? 0b10 : 0b00) |
+                    (paletteByte.BitIsSet(bit + 1) ? 0b01 : 0b00)
+                );
             }
+
+            return colors;
         }
         
         public byte WY => ValueGetter(WYAddr);
@@ -122,6 +124,8 @@ namespace GameBoyEmulator.Core.RamHandlers.HardwareRegisters
         private const ushort LYAddr = 0xFF44;
         private const ushort LYCAddr = 0xFF45;
         private const ushort BGPAddr = 0xFF47;
+        private const ushort OBP0Addr = 0xFF48;
+        private const ushort OBP1Addr = 0xFF49;
         private const ushort WYAddr = 0xFF4A;
         private const ushort WXAddr = 0xFF4B;
 

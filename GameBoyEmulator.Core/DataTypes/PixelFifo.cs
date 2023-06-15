@@ -3,26 +3,26 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace GameBoyEmulator.Core.DataTypes
 {
-    public class PixelFifo : ICollection, IReadOnlyCollection<Pixel>
+    public class Fifo<T> : ICollection, IReadOnlyCollection<T>
     {
         private const int MaxItems = 16;
         
-        private readonly Queue<Pixel> _fifo = new Queue<Pixel>(MaxItems);
+        private readonly Queue<T> _fifo = new Queue<T>(MaxItems);
 
         public void Clear() => _fifo.Clear();
         
-        public void Enqueue(Pixel item)
+        public void Enqueue(T item)
         {
             if (_fifo.Count >= MaxItems) throw new IndexOutOfRangeException();
 
             _fifo.Enqueue(item);
         }
 
-        public Pixel Dequeue() => _fifo.Dequeue();
-        public bool TryDequeue([MaybeNullWhen(false)] out Pixel result) => _fifo.TryDequeue(out result);
-        public bool TryPeek([MaybeNullWhen(false)] out Pixel result) => _fifo.TryPeek(out result);
+        public T Dequeue() => _fifo.Dequeue();
+        public bool TryDequeue([MaybeNullWhen(false)] out T result) => _fifo.TryDequeue(out result);
+        public bool TryPeek([MaybeNullWhen(false)] out T result) => _fifo.TryPeek(out result);
 
-        public IEnumerator<Pixel> GetEnumerator()
+        public IEnumerator<T> GetEnumerator()
         {
             return _fifo.GetEnumerator();
         }

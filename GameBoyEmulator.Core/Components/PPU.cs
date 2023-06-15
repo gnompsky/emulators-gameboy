@@ -5,8 +5,9 @@ namespace GameBoyEmulator.Core.Components
 {
     public class PPU
     {
-        public readonly PixelFifo BackgroundFifo = new PixelFifo();
-        public readonly PixelFifo OamFifo = new PixelFifo();
+        public readonly Fifo<Colors> LcdFifo = new Fifo<Colors>();
+        private readonly Fifo<Colors> _backgroundFifo = new Fifo<Colors>();
+        private readonly Fifo<ObjPixel> _oamFifo = new Fifo<ObjPixel>();
         
         private readonly InterruptHandler _interrupts;
         private readonly LcdHandler _lcd;
@@ -20,7 +21,14 @@ namespace GameBoyEmulator.Core.Components
             _interrupts = memory.InterruptHandler;
             _lcd = memory.LcdHandler;
 
-            _pixelFetcher = new PixelFetcher(_lcd, memory.VRamHandler, memory.OamHandler, BackgroundFifo);
+            _pixelFetcher = new PixelFetcher(
+                _lcd,
+                memory.VRamHandler,
+                memory.OamHandler,
+                _backgroundFifo,
+                _oamFifo,
+                LcdFifo
+            );
         }
 
         public void Step(int cyclesTaken)
@@ -60,13 +68,13 @@ namespace GameBoyEmulator.Core.Components
                 case Modes.Oam:
                     if(_tick >= 80) {
                         _lcd.STATMode = Modes.Vram;
-                        BackgroundFifo.Clear();
-                        OamFifo.Clear();
+                        _backgroundFifo.Clear();
+                        _oamFifo.Clear();
                         _tick -= 80;
                     }
                     break;
                 case Modes.Vram:
-                    _pixelFetcher.Step(_tick);
+                    _pixelFetcher.Step(ref _tick);
                     if(_tick >= 172) {
                         _lcd.STATMode = Modes.HBlank;
                         _tick -= 172;

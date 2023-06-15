@@ -6,7 +6,7 @@ namespace GameBoyEmulator.Core
     public class GameBoy
     {
         public static readonly GameBoy Instance = new GameBoy();
-        public PixelFifo Pixels => _ppu.BackgroundFifo;
+        public Fifo<Colors> LcdPixels => _ppu.LcdFifo;
 
         private readonly Registers _registers;
         private readonly Memory _memory;

@@ -9,7 +9,9 @@ namespace GameBoyEmulator.Core.Components
         private readonly LcdHandler _lcd;
         private readonly VRamHandler _vRam;
         private readonly OamHandler _oam;
-        private readonly PixelFifo _backgroundFifo;
+        private readonly Fifo<Colors> _backgroundFifo;
+        private readonly Fifo<ObjPixel> _oamFifo;
+        private readonly Fifo<Colors> _finalFifo;
 
         private State _state = State.GetTile;
         private byte _curTileIndex;
@@ -18,16 +20,36 @@ namespace GameBoyEmulator.Core.Components
         private int _curTileX = 0;
         private int _curTileY = 0;
 
-        public PixelFetcher(LcdHandler lcd, VRamHandler vRam, OamHandler oam, PixelFifo backgroundFifo)
+        public PixelFetcher(
+            LcdHandler lcd, 
+            VRamHandler vRam, 
+            OamHandler oam, 
+            Fifo<Colors> backgroundFifo, 
+            Fifo<ObjPixel> oamFifo,
+            Fifo<Colors> finalFifo
+        )
         {
             _lcd = lcd;
             _vRam = vRam;
             _oam = oam;
             _backgroundFifo = backgroundFifo;
+            _oamFifo = oamFifo;
+            _finalFifo = finalFifo;
         }
 
-        public void Step(int tick)
+        public void Step(ref int tick)
         {
+            if (_lcd.LCDCWindowEnabled)
+            {
+                // TODO: This will likely break unless my timing is good...which it's not
+                _backgroundFifo.Clear();
+                _state = State.GetTile;
+                if (_lcd.WX == 0x00 && (_lcd.SCX & 7) > 0)
+                {
+                    tick++; // Shorten by 1 dot - we do this by pretending we're 1 dot further on than we are
+                }
+            }
+            
             switch (_state)
             {
                 case State.GetTile:
@@ -49,7 +71,7 @@ namespace GameBoyEmulator.Core.Components
                     _state = State.Push;
                     break;
                 case State.Push:
-                    if (TryPush())
+                    if (TryPushBg())
                     {
                         // If we weren't able to push, try again later
                         _state = State.GetTile;
@@ -87,7 +109,7 @@ namespace GameBoyEmulator.Core.Components
             return _vRam.ReadValue(tileDataAddress);
         }
 
-        private bool TryPush()
+        private bool TryPushBg()
         {
             if (_backgroundFifo.Count > 8) return false;
 
@@ -101,9 +123,7 @@ namespace GameBoyEmulator.Core.Components
                 );
                 var color = palette[colorIndex];
 
-                //TODO: ??? - var palette = Pixel.Palettes.OBP0;
-                var backgroundPriority = Pixel.BackgroundPriorities.ObjFirst;
-                _backgroundFifo.Enqueue(new Pixel(color, Pixel.Palettes.OBP0, backgroundPriority));
+                _backgroundFifo.Enqueue(color);
             }
 
             return true;

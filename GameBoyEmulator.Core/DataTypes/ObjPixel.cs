@@ -1,19 +1,19 @@
 namespace GameBoyEmulator.Core.DataTypes
 {
-    public struct Pixel
+    public struct ObjPixel
     {
         public readonly Colors Color;
-        public readonly Palettes Palette;
+        public readonly ObjPalettes ObjPalette;
         public readonly BackgroundPriorities BackgroundPriority;
 
-        public Pixel(Colors color, Palettes palette, BackgroundPriorities backgroundPriority)
+        public ObjPixel(Colors color, ObjPalettes objPalette, BackgroundPriorities backgroundPriority)
         {
             Color = color;
-            Palette = palette;
+            ObjPalette = objPalette;
             BackgroundPriority = backgroundPriority;
         }
 
-        public enum Palettes : byte
+        public enum ObjPalettes : byte
         {
             OBP0 = 0b0,
             OBP1 = 0b1

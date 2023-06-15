@@ -34,7 +34,7 @@ namespace GameBoyEmulator.WindowsGL
             {
                 sw.Restart();
                 GameBoy.Instance.Step();
-                if (GameBoy.Instance.Pixels.Count >= 8)
+                if (GameBoy.Instance.LcdPixels.Count >= 8)
                 {
                     PushPixels(buffer, ref curX, ref curY);
                 }
@@ -221,9 +221,9 @@ namespace GameBoyEmulator.WindowsGL
 
         private static void PushPixels(Colors[][] buffer, ref int curX, ref int curY)
         {
-            while (GameBoy.Instance.Pixels.TryDequeue(out var pixel))
+            while (GameBoy.Instance.LcdPixels.TryDequeue(out var color))
             {
-                buffer[curX][curY] = pixel.Color;
+                buffer[curX][curY] = color;
 
                 if (++curX < BUFFER_W) continue;
                 curX = 0;
