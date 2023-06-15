@@ -100,7 +100,7 @@ namespace GameBoyEmulator.Core.Components
 
                 var palette = Pixel.Palettes.OBP0;
                 var backgroundPriority = Pixel.BackgroundPriorities.ObjFirst;
-                if (color != Colors.Black) Console.WriteLine("Enqueing " + color);
+                if (color != Colors.Black) Console.WriteLine("Enqueueing " + color);
                 _backgroundFifo.Enqueue(new Pixel(color, palette, backgroundPriority));
             }
 

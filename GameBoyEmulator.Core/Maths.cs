@@ -80,7 +80,7 @@ namespace GameBoyEmulator.Core
         private static byte OverrideBit(this byte value, int bit, bool? overrideBit)
         {
             if (!overrideBit.HasValue) return value;
-            return overrideBit.Value ? value.SetBit(bit) : value.UnsetBit(value);
+            return overrideBit.Value ? value.SetBit(bit) : value.UnsetBit(bit);
         }
     }
 }
