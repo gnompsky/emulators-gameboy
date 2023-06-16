@@ -52,15 +52,35 @@ namespace GameBoyEmulator.Core.Components
             setter(newVal, ref cycles);
         }
 
-        private ExecuteDelegate AddN(Getter<byte> amountGetter) => (ref int cycles) =>
+        private ExecuteDelegate AddN(Getter<byte> amountGetter) => AddN(SetA, GetA, amountGetter);
+
+        private ExecuteDelegate AddN(Setter<byte> valueSetter, Getter<byte> valueGetter, Getter<byte> amountGetter) =>
+            (ref int cycles) =>
+            {
+                // TODO: This is almost certainly wrong :(
+                var newVal = valueGetter(ref cycles).WrappingAdd(amountGetter(ref cycles), out var halfCarried);
+                _registers.IsZero = newVal == 0;
+                _registers.IsSubtract = false;
+                _registers.IsCarry = (newVal & 0xFF00) != 0;
+                _registers.IsHalfCarry = halfCarried;
+                valueSetter(newVal, ref cycles);
+            };
+
+        private ExecuteDelegate AddNN(Getter<ushort> amountGetter) => AddNN(SetHL, GetHL, amountGetter);
+
+        private ExecuteDelegate AddNN(Setter<ushort> valueSetter, Getter<ushort> valueGetter,
+            Getter<byte> amountGetter) =>
+            AddNN(valueSetter, valueGetter, (ref int cycles) => (ushort)amountGetter(ref cycles));
+        private ExecuteDelegate AddNN(Setter<ushort> valueSetter, Getter<ushort> valueGetter,
+            Getter<ushort> amountGetter) => (ref int cycles) =>
         {
-            // TODO: This is almost certainly wrong :(
-            var newVal = _registers.A.WrappingAdd(amountGetter(ref cycles), out var halfCarried);
-            _registers.IsZero = newVal == 0;
+            var newVal = valueGetter(ref cycles).WrappingAdd(amountGetter(ref cycles), out var halfCarried);
+
+            // Zero is left alone
             _registers.IsSubtract = false;
-            _registers.IsCarry = (newVal & 0xFF00) != 0;
+            _registers.IsCarry = (newVal & 0xFFFF0000) != 0;
             _registers.IsHalfCarry = halfCarried;
-            _registers.A = newVal;
+            valueSetter(newVal, ref cycles);
         };
         
         private ExecuteDelegate AdcN(Getter<byte> amountGetter) =>
@@ -136,6 +156,8 @@ namespace GameBoyEmulator.Core.Components
 
         private ExecuteDelegate SetIndirect(Getter<ushort> addressGetter, Getter<byte> valueGetter)
             => (ref int cycles) => _memory.SetN(addressGetter(ref cycles), valueGetter(ref cycles), ref cycles);
+        private ExecuteDelegate SetIndirect(Getter<ushort> addressGetter, Getter<ushort> valueGetter)
+            => (ref int cycles) => _memory.SetNN(addressGetter(ref cycles), valueGetter(ref cycles), ref cycles);
         
         private void IncBC(ref int cycles) => IncNN(SetBC, GetBC, ref cycles);
         private void IncDE(ref int cycles) => IncNN(SetDE, GetDE, ref cycles);

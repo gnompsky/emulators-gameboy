@@ -17,7 +17,13 @@ namespace GameBoyEmulator.Core
             return unchecked((byte)(a - b));
         }
 
-        public static ushort WrappingAdd(this ushort aa, ushort bb) => unchecked((ushort)(aa + bb));
+        public static ushort WrappingAdd(this ushort aa, ushort bb) => WrappingAdd(aa, bb, out _);
+
+        public static ushort WrappingAdd(this ushort aa, ushort bb, out bool halfCarried)
+        {
+            halfCarried = (aa & 0x0F) + (bb & 0x0F) > 0x0F;
+            return unchecked((ushort)(aa + bb));
+        }
 
         public static ushort WrappingSubtract(this ushort aa, ushort bb) => unchecked((ushort)(aa - bb));
 

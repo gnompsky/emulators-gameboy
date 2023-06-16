@@ -139,5 +139,29 @@ namespace GameBoyEmulator.Core.Components
                 ), ref cycles);
                 _registers.IsCarry = didCarry;
             };
+
+        private ExecuteDelegate ShiftArithmetic(Setter<byte> valueSetter, Getter<byte> valueGetter, bool isLeft)
+            => (ref int cycles) =>
+            {
+                var value = valueGetter(ref cycles);
+
+                if (isLeft)
+                {
+                    _registers.IsCarry = (value & 0x80) != 0;
+                    value <<= 1;
+                }
+                else
+                {
+                    _registers.IsCarry = (value & 0x01) != 0;
+                    value = (byte)((value & 0x80) | (value >> 1));
+                }
+
+                _registers.IsZero = value == 0;
+                _registers.IsSubtract = false;
+                _registers.IsHalfCarry = false;
+
+                valueSetter(value, ref cycles);
+            };
+        
     }
 }

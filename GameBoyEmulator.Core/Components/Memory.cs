@@ -75,6 +75,13 @@ namespace GameBoyEmulator.Core.Components
 
         public ushort GetNN(ushort address, ref int cycles) => Maths.CombineBytes(GetN(address, ref cycles), GetN((ushort)(address + 1), ref cycles));
 
+        public void SetNN(ushort address, ushort value, ref int cycles)
+        {
+            value.SplitToBytes(out var lower, out var upper);
+            SetN(address, lower, ref cycles);
+            SetN((ushort)(address + 1), upper, ref cycles);
+        }
+
         public void SetN(ushort address, byte value, ref int cycles)
         {
             cycles += 4;

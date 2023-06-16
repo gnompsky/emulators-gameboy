@@ -44,8 +44,8 @@ namespace GameBoyEmulator.Core.Components
                     { 0x05, ("DEC B", DecB) },
                     { 0x06, ("LD B,d8", LdN(SetB, GetNextN)) },
                     { 0x07, ("RLCA", RotateLeft(GetA, SetA)) },
-                    { 0x08, ("LD (a16),SP", NotImpl) },
-                    { 0x09, ("ADD HL,BC", NotImpl) },
+                    { 0x08, ("LD (a16),SP", SetIndirect(GetNextNN, (ref int cycles) => GetSP(ref cycles))) },
+                    { 0x09, ("ADD HL,BC", AddNN(GetBC)) },
                     { 0x0A, ("LD A,(BC)", LdN(SetA, GetIndirect(GetBC))) },
                     { 0x0B, ("DEC BC", DecBC) },
                     { 0x0C, ("INC C", IncC) },
@@ -75,7 +75,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0x16, ("LD D,d8", LdN(SetD, GetNextN)) },
                     { 0x17, ("RLA", RotateLeftThroughCarry(GetA, SetA)) },
                     { 0x18, ("JR r8", JumpRelative(GetNextSignedN)) },
-                    { 0x19, ("ADD HL,DE", NotImpl) },
+                    { 0x19, ("ADD HL,DE", AddNN(GetDE)) },
                     { 0x1A, ("LD A,(DE)", LdN(SetA, GetIndirect(GetDE))) },
                     { 0x1B, ("DEC DE", DecDE) },
                     { 0x1C, ("INC E", IncE) },
@@ -102,7 +102,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0x26, ("LD H,d8", LdN(SetH, GetNextN)) },
                     { 0x27, ("DAA", NotImpl) },
                     { 0x28, ("JR Z,r8", JumpRelativeIf(GetZero, GetNextSignedN)) },
-                    { 0x29, ("ADD HL,HL", NotImpl) },
+                    { 0x29, ("ADD HL,HL", AddNN(GetHL)) },
                     {
                         0x2A, ("LD A,(HL+)", (ref int cycles) =>
                         {
@@ -135,7 +135,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0x36, ("LD (HL),d8", LdN(SetHLI, GetNextN)) },
                     { 0x37, ("SCF", NotImpl) },
                     { 0x38, ("JR C,r8", JumpRelativeIf(GetCarry, GetNextSignedN)) },
-                    { 0x39, ("ADD HL,SP", NotImpl) },
+                    { 0x39, ("ADD HL,SP", AddNN(GetSP)) },
                     {
                         0x3A, ("LD A,(HL-)", (ref int cycles) =>
                         {
@@ -328,11 +328,11 @@ namespace GameBoyEmulator.Core.Components
                     { 0xC4, ("CALL NZ,a16", CallIf(Not(GetZero), GetNextNN)) },
                     { 0xC5, ("PUSH BC", Push(GetBC)) },
                     { 0xC6, ("ADD A,d8", AddN(GetNextN)) },
-                    { 0xC7, ("RST 00H", NotImpl) },
+                    { 0xC7, ("RST 00H", Call((ref int _) => 0x0000)) },
                     { 0xC8, ("RET Z", ReturnIf(GetZero)) },
                     { 0xC9, ("RET", ReturnIf((ref int _) => true)) },
                     { 0xCA, ("JP Z,a16", JumpIf(GetZero, GetNextNN)) },
-                    { 0xCB, ("PREFIX CB", (ref int cycles) => ExecuteFrom(_cbMap, GetNextN(ref cycles), ref cycles)) },
+                    { 0xCB, ("PREFIX CB", (ref int cycles) => ExecuteFrom(_cbMap!, GetNextN(ref cycles), ref cycles)) },
                     { 0xCC, ("CALL Z,a16", CallIf(GetZero, GetNextNN)) },
                     { 0xCD, ("CALL a16", Call(GetNextNN)) },
                     { 0xCE, ("ADC A,d8", AdcN(GetNextN)) },
@@ -349,7 +349,7 @@ namespace GameBoyEmulator.Core.Components
                     { 0xD4, ("CALL NC,a16", CallIf(Not(GetCarry), GetNextNN)) },
                     { 0xD5, ("PUSH DE", Push(GetDE)) },
                     { 0xD6, ("SUB d8", SubN(GetNextN)) },
-                    { 0xD7, ("RST 10H", NotImpl) },
+                    { 0xD7, ("RST 10H", Call((ref int _) => 0x0010)) },
                     { 0xD8, ("RET C", ReturnIf(GetCarry)) },
                     {
                         0xD9, ("RETI", (ref int cycles) =>
@@ -376,8 +376,12 @@ namespace GameBoyEmulator.Core.Components
                     // 0xE4 - Non-existent
                     { 0xE5, ("PUSH HL", Push(GetHL)) },
                     { 0xE6, ("AND d8", And(GetNextN)) },
-                    { 0xE7, ("RST 20H", NotImpl) },
-                    { 0xE8, ("ADD SP,r8", NotImpl) },
+                    { 0xE7, ("RST 20H", Call((ref int _) => 0x0020)) },
+                    { 0xE8, ("ADD SP,r8", (ref int cycles) =>
+                    {
+                        AddNN(SetSP, GetSP, GetNextN)(ref cycles);
+                        _registers.IsZero = true;
+                    }) },
                     { 0xE9, ("JP (HL)", Jump(GetHL)) },
                     { 0xEA, ("LD (a16),A", LdIndirectN(GetNextNN, GetA)) },
                     // 0xEB - Non-existent
@@ -403,8 +407,8 @@ namespace GameBoyEmulator.Core.Components
                     // 0xF4 - Non-existent
                     { 0xF5, ("PUSH AF", Push(GetAF)) },
                     { 0xF6, ("OR d8", Or(GetNextN)) },
-                    { 0xF7, ("RST 30H", NotImpl) },
-                    { 0xF8, ("LD HL,SP+r8", NotImpl) },
+                    { 0xF7, ("RST 30H", Call((ref int _) => 0x0030)) },
+                    { 0xF8, ("LD HL,SP+r8", LdNN(SetHL, (ref int cycles) => (ushort)(GetSP(ref cycles) + GetNextNN(ref cycles)))) },
                     { 0xF9, ("LD SP,HL", LdNN(SetSP, GetHL)) },
                     { 0xFA, ("LD A,(a16)", LdN(SetA, GetIndirect(GetNextNN))) },
                     { 0xFB, ("EI", (ref int _) => _registers.IME = true) },
@@ -464,22 +468,22 @@ namespace GameBoyEmulator.Core.Components
 
 #region 0x2_
 
-                    { 0x20, ("SLA B", NotImpl) },
-                    { 0x21, ("SLA C", NotImpl) },
-                    { 0x22, ("SLA D", NotImpl) },
-                    { 0x23, ("SLA E", NotImpl) },
-                    { 0x24, ("SLA H", NotImpl) },
-                    { 0x25, ("SLA L", NotImpl) },
-                    { 0x26, ("SLA (HL)", NotImpl) },
-                    { 0x27, ("SLA A", NotImpl) },
-                    { 0x28, ("SRA B", NotImpl) },
-                    { 0x29, ("SRA C", NotImpl) },
-                    { 0x2A, ("SRA D", NotImpl) },
-                    { 0x2B, ("SRA E", NotImpl) },
-                    { 0x2C, ("SRA H", NotImpl) },
-                    { 0x2D, ("SRA L", NotImpl) },
-                    { 0x2E, ("SRA (HL)", NotImpl) },
-                    { 0x2F, ("SRA A", NotImpl) },
+                    { 0x20, ("SLA B", ShiftArithmetic(SetB, GetB, true)) },
+                    { 0x21, ("SLA C", ShiftArithmetic(SetC, GetC, true)) },
+                    { 0x22, ("SLA D", ShiftArithmetic(SetD, GetD, true)) },
+                    { 0x23, ("SLA E", ShiftArithmetic(SetE, GetE, true)) },
+                    { 0x24, ("SLA H", ShiftArithmetic(SetH, GetH, true)) },
+                    { 0x25, ("SLA L", ShiftArithmetic(SetL, GetL, true)) },
+                    { 0x26, ("SLA (HL)", ShiftArithmetic(SetHLI, GetHLI, true)) },
+                    { 0x27, ("SLA A", ShiftArithmetic(SetA, GetA, true)) },
+                    { 0x28, ("SRA B", ShiftArithmetic(SetB, GetB, false)) },
+                    { 0x29, ("SRA C", ShiftArithmetic(SetC, GetC, false)) },
+                    { 0x2A, ("SRA D", ShiftArithmetic(SetD, GetD, false)) },
+                    { 0x2B, ("SRA E", ShiftArithmetic(SetE, GetE, false)) },
+                    { 0x2C, ("SRA H", ShiftArithmetic(SetH, GetH, false)) },
+                    { 0x2D, ("SRA L", ShiftArithmetic(SetL, GetL, false)) },
+                    { 0x2E, ("SRA (HL)", ShiftArithmetic(SetHLI, GetHLI, false)) },
+                    { 0x2F, ("SRA A", ShiftArithmetic(SetA, GetA, false)) },
 
 #endregion
 
