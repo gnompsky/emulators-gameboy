@@ -47,8 +47,8 @@ namespace GameBoyEmulator.Core
         
         public void LoadRom(byte[] romBytes)
         {
-            _memory.LoadROM(romBytes);
             Reset();
+            _memory.LoadROM(romBytes);
         }
     }
 }

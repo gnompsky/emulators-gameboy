@@ -60,8 +60,21 @@ namespace GameBoyEmulator.Core.Components
 
         public void LoadROM(byte[] romBytes)
         {
-            // TODO: This needs work
-            Array.Copy(romBytes, _memory, Math.Min(romBytes.Length, _memory.Length));
+            LoadROMPart(romBytes, 0x0000, 0x7FFF, true);
+            LoadROMPart(romBytes, 0xA000, 0xBFFF, false);
+        }
+
+        private void LoadROMPart(byte[] romBytes, ushort startInclusive, ushort endInclusive, bool required)
+        {
+            if (!required && romBytes.Length <= endInclusive) return;
+
+            Array.Copy(
+                romBytes,
+                startInclusive,
+                _memory,
+                startInclusive,
+                endInclusive - startInclusive + 1
+            );
         }
         
         public byte GetN(ushort address, ref int cycles)
