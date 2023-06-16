@@ -140,28 +140,89 @@ namespace GameBoyEmulator.Core.Components
                 _registers.IsCarry = didCarry;
             };
 
-        private ExecuteDelegate ShiftArithmetic(Setter<byte> valueSetter, Getter<byte> valueGetter, bool isLeft)
-            => (ref int cycles) =>
+        private ExecuteDelegate Shift(Setter<byte> valueSetter, Getter<byte> valueGetter, bool isLeft,
+            bool isRightLogical = false) => (ref int cycles) =>
+        {
+            var value = valueGetter(ref cycles);
+
+            if (isLeft)
             {
-                var value = valueGetter(ref cycles);
+                _registers.IsCarry = (value & 0x80) != 0;
+                value <<= 1;
+            }
+            else
+            {
+                _registers.IsCarry = (value & 0x01) != 0;
+                value = (byte)(
+                    isRightLogical
+                        ? value >> 1
+                        : (value & 0x80) | (value >> 1)
+                );
+            }
 
-                if (isLeft)
-                {
-                    _registers.IsCarry = (value & 0x80) != 0;
-                    value <<= 1;
-                }
-                else
-                {
-                    _registers.IsCarry = (value & 0x01) != 0;
-                    value = (byte)((value & 0x80) | (value >> 1));
-                }
+            _registers.IsZero = value == 0;
+            _registers.IsSubtract = false;
+            _registers.IsHalfCarry = false;
 
-                _registers.IsZero = value == 0;
-                _registers.IsSubtract = false;
-                _registers.IsHalfCarry = false;
+            valueSetter(value, ref cycles);
+        };
 
-                valueSetter(value, ref cycles);
-            };
-        
+        private ExecuteDelegate Swap(Setter<byte> valueSetter, Getter<byte> valueGetter) => (ref int cycles) =>
+        {
+            var value = valueGetter(ref cycles);
+
+            value = (byte)(((value & 0xf) << 4) | ((value & 0xf0) >> 4));
+
+            _registers.IsZero = value == 0;
+            _registers.IsSubtract = false;
+            _registers.IsHalfCarry = false;
+            _registers.IsCarry = false;
+
+            valueSetter(value, ref cycles);
+        };
+
+        private void Daa(ref int _)
+        {
+            var a = _registers.A;
+
+            if (_registers.IsSubtract)
+            {
+                if (_registers.IsHalfCarry) a = (byte)(a.WrappingSubtract(0x06) & 0xFF);
+                if (_registers.IsCarry) a = a.WrappingSubtract(0x60);
+            }
+            else
+            {
+                if (_registers.IsHalfCarry || (a & 0xF) > 9) a = a.WrappingAdd(0x06);
+                if (_registers.IsCarry || a > 0x9F) a = a.WrappingAdd(0x60);
+            }
+
+            _registers.A = a;
+            _registers.IsHalfCarry = false;
+            _registers.IsZero = a != 0;
+            // TODO: This clearly won't work. Is the wrapping above correct? How do we know if it wrapped?
+            _registers.IsCarry = a >= 0x100;
+        }
+
+        private void Cpl(ref int _)
+        {
+            _registers.A = (byte)~_registers.A;
+
+            _registers.IsCarry = true;
+            _registers.IsHalfCarry = true;
+        }
+
+        private void Scf(ref int _)
+        {
+            _registers.IsCarry = true;
+            _registers.IsSubtract = false;
+            _registers.IsHalfCarry = false;
+        }
+
+        private void Ccf(ref int _)
+        {
+            _registers.IsCarry = !_registers.IsCarry;
+            _registers.IsSubtract = false;
+            _registers.IsHalfCarry = false;
+        }
     }
 }

@@ -14,6 +14,7 @@ namespace GameBoyEmulator.Core
         private readonly PPU _ppu;
         
         public bool StopMode = false;
+        public bool HaltMode = false;
 
         private GameBoy()
         {
@@ -26,6 +27,7 @@ namespace GameBoyEmulator.Core
         public void Reset()
         {
             StopMode = false;
+            HaltMode = false;
             _registers.Reset();
             _memory.Reset();
         }
@@ -34,7 +36,7 @@ namespace GameBoyEmulator.Core
         {
             var cyclesTaken = 0;
 
-            if (!StopMode)
+            if (!StopMode || !HaltMode)
             {
                 _instructions.ExecuteNext(ref cyclesTaken);
             }
