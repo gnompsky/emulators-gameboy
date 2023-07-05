@@ -65,9 +65,10 @@ namespace GameBoyEmulator.WindowsGL
         {
             GameBoy.Instance.Reset();
 
-            var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/cpu_instrs.gb");
             //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/Tetris (World) (Rev 1).gb");
-            GameBoy.Instance.LoadRom(romBytes);
+            //var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/cpu_instrs.gb");
+            var romBytes = File.ReadAllBytes("../../../../GameBoyEmulator.Tests/ROMs/03-op sp,hl.gb");
+            GameBoy.Instance.LoadRom(romBytes, true);
 
             //_sound = new DynamicSoundEffectInstance(48000, AudioChannels.Stereo);
             
