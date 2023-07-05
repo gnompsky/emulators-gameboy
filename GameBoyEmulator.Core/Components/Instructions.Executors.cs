@@ -57,8 +57,12 @@ namespace GameBoyEmulator.Core.Components
             {
                 if (!condition(ref cycles)) return;
 
+                // We need to push the NEXT instruction address not the current one, so just in case our addressGetter
+                // needs to read some bytes first, let's get it now so that PC is pointing to the next instruction ready
+                var jumpDestination = addressGetter(ref cycles);
+
                 Push(GetPC)(ref cycles);
-                Jump(addressGetter)(ref cycles);
+                Jump((ref int _) => jumpDestination)(ref cycles);
             };
 
         private ExecuteDelegate Push(Getter<ushort> valueGetter) =>
