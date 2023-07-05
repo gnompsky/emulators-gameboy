@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using GameBoyEmulator.Core.Extensions;
 
 namespace GameBoyEmulator.Core.Components
@@ -754,15 +755,29 @@ namespace GameBoyEmulator.Core.Components
             );
         }
 
-        public void ExecuteNext(ref int cycles)
+        public void ExecuteNext(StreamWriter logStream, ref int cycles)
         {
-            if (_registers.PC == 0x00E9)
-            {
-                Console.Error.WriteLine("Logo check failed. Skipping");
-                _registers.PC = 0x00FC;
-            }
+            //if (_registers.PC == 0xC246) Debugger.Launch();
 
-            ExecuteFrom(_map, GetNextN(ref cycles), ref cycles);
+            var dummy = 0;
+            var parts = new[]
+            {
+                $"A:{_registers.A.ToHex()}",
+                $"F:{_registers.F.ToHex()}",
+                $"B:{_registers.B.ToHex()}",
+                $"C:{_registers.C.ToHex()}",
+                $"D:{_registers.D.ToHex()}",
+                $"E:{_registers.E.ToHex()}",
+                $"H:{_registers.H.ToHex()}",
+                $"L:{_registers.L.ToHex()}",
+                $"SP:{_registers.SP.ToHex()}",
+                $"PC:{_registers.PC.ToHex()}",
+                $"PCMEM:{_memory.GetN(_registers.PC, ref dummy).ToHex()},{_memory.GetN((ushort)(_registers.PC+1), ref dummy).ToHex()},{_memory.GetN((ushort)(_registers.PC+2), ref dummy).ToHex()},{_memory.GetN((ushort)(_registers.PC+3), ref dummy).ToHex()}",
+            };
+            logStream.WriteLine(string.Join(' ', parts));
+
+            var instruction = GetNextN(ref cycles);
+            ExecuteFrom(_map, instruction, ref cycles);
         }
 
         private static void ExecuteFrom(IReadOnlyDictionary<byte, (string name, ExecuteDelegate execute)> map, byte instruction, ref int cycles)
